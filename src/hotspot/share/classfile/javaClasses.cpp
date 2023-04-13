@@ -2884,7 +2884,7 @@ Handle java_lang_Throwable::create_initialization_error(JavaThread* current, Han
   st.print("Exception %s%s ", throwable()->klass()->name()->as_klass_external_name(),
              message == nullptr ? "" : ":");
   if (message == NULL) {
-    st.print("[in thread \"%s\"]", THREAD->name());
+    st.print("[in thread \"%s\"]", current->name());
   } else {
     st.print("%s [in thread \"%s\"]", message->as_C_string(), current->name());
   }
