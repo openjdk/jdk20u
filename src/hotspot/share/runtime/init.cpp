@@ -92,6 +92,10 @@ void stubRoutines_init2(); // note: StubRoutines need 2-phase init
 
 void continuations_init(); // depends on flags (UseCompressedOops) and barrier sets
 
+/* MODIFY START */
+void adaptive_thread_factory_initialisation();
+/* MODIFY END */
+
 // Do not disable thread-local-storage, as it is important for some
 // JNI/JVM/JVMTI functions and signal handlers to work properly
 // during VM shutdown
@@ -167,6 +171,10 @@ jint init_globals() {
   if (PrintFlagsFinal || PrintFlagsRanges) {
     JVMFlag::printFlags(tty, false, PrintFlagsRanges);
   }
+
+  /* MODIFY START */
+  adaptive_thread_factory_initialisation();
+  /* MODIFY END */
 
   return JNI_OK;
 }

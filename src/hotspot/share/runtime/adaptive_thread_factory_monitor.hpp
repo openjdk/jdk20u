@@ -8,6 +8,9 @@ class AdaptiveThreadFactoryMonitor {
         std::atomic<int> _numberMonitoredThreads;
     public:
         AdaptiveThreadFactoryMonitor();
+        AdaptiveThreadFactoryMonitor& operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor);
+        static AdaptiveThreadFactoryMonitor _adaptive_thread_factory_monitor;
+        static void initialiseAdaptiveThreadFactoryMonitor();
 };
 
 #endif // SHARE_RUNTIME_ADAPTIVE_THREAD_FACTORY_MONITOR_HPP
