@@ -19,3 +19,11 @@ void AdaptiveThreadFactoryMonitor::initialiseAdaptiveThreadFactoryMonitor() {
 void adaptive_thread_factory_initialisation() {
     AdaptiveThreadFactoryMonitor::initialiseAdaptiveThreadFactoryMonitor();
 }
+
+void AdaptiveThreadFactoryMonitor::incrementNumberOfMonitoredThreads() {
+    _adaptive_thread_factory_monitor._numberMonitoredThreads++;
+}
+
+int AdaptiveThreadFactoryMonitor::getNumberOfMonitoredThreads() {
+    return _adaptive_thread_factory_monitor._numberMonitoredThreads.load();
+}
