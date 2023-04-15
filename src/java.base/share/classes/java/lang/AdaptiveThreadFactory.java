@@ -5,6 +5,11 @@ package java.lang;
  */
 public class AdaptiveThreadFactory {
 
+    private static native void registerNatives();
+    static {
+        registerNatives();
+    }
+
     /**
     * Comment
     */
@@ -12,7 +17,8 @@ public class AdaptiveThreadFactory {
 
     /**
     * Comment
+    * @return Comment
     */
-    public static void test() {}
+    public static native int adaptiveThreadFactoryTest();
 
 }

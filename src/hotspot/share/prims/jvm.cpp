@@ -706,6 +706,12 @@ JVM_LEAF(jboolean, JVM_IsFinalizationEnabled(JNIEnv * env))
   return InstanceKlass::is_finalization_enabled();
 JVM_END
 
+/* MODIFY START */
+JVM_ENTRY(jint, JVM_AdaptiveThreadFactoryTest(JNIEnv *env, jobject adaptiveThreadFactory))
+  return (jint)0;
+JVM_END
+/* MODIFY END */
+
 // jdk.internal.vm.Continuation /////////////////////////////////////////////////////
 
 JVM_ENTRY(void, JVM_RegisterContinuationMethods(JNIEnv *env, jclass cls))

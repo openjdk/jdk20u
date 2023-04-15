@@ -794,6 +794,11 @@ JVM_ReportFinalizationComplete(JNIEnv *env, jobject finalizee);
 JNIEXPORT jboolean JNICALL
 JVM_IsFinalizationEnabled(JNIEnv *env);
 
+/* START MODIFY */
+JNIEXPORT jint JNICALL
+JVM_AdaptiveThreadFactoryTest(JNIEnv *env, jobject adaptiveThreadFactory);
+/* END MODIFY */
+
 /*************************************************************************
  PART 2: Support for the Verifier and Class File Format Checker
  ************************************************************************/
