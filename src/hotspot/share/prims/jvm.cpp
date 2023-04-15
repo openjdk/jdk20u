@@ -112,6 +112,10 @@
 
 #include <errno.h>
 
+/* MODIFY START */
+#include "runtime/adaptive_thread_factory_monitor.hpp"
+/* MODIFY END */
+
 /*
   NOTE about use of any ctor or function call that can trigger a safepoint/GC:
   such ctors and calls MUST NOT come between an oop declaration/init and its
@@ -708,7 +712,7 @@ JVM_END
 
 /* MODIFY START */
 JVM_ENTRY(jint, JVM_AdaptiveThreadFactoryTest(JNIEnv *env, jobject adaptiveThreadFactory))
-  return (jint)0;
+  return (jint)AdaptiveThreadFactoryMonitor::getNumberOfMonitoredThreads();
 JVM_END
 /* MODIFY END */
 
