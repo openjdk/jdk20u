@@ -173,7 +173,7 @@ jint init_globals() {
   }
 
   /* MODIFY START */
-  adaptive_thread_factory_initialisation();
+  //adaptive_thread_factory_initialisation();
   /* MODIFY END */
 
   return JNI_OK;

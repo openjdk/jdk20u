@@ -204,7 +204,7 @@ void Thread::call_run() {
   // Thread::current() should be set.
 
   /* MODIFY START */
-  AdaptiveThreadFactoryMonitor::incrementNumberOfMonitoredThreads();
+  //AdaptiveThreadFactoryMonitor::incrementNumberOfMonitoredThreads();
   /* MODIFY END */
 
   assert(Thread::current_or_null() != NULL, "current thread is unset");

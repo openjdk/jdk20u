@@ -6,7 +6,9 @@
 #define ARRAY_LENGTH(a) (sizeof(a)/sizeof(a[0]))
 
 static JNINativeMethod methods[] = {
-    {"adaptiveThreadFactoryTest", "()I", (void *)&JVM_AdaptiveThreadFactoryTest},
+    //{"adaptiveThreadFactoryTest", "()I", (void *)&JVM_AdaptiveThreadFactoryTest},
+    {"queryMonitor", "(I)Z", (void *)&JVM_QueryMonitor},
+    {"registerWithMonitor", "(I)V", (void *)&JVM_RegisterWithMonitor},
 };
 
 JNIEXPORT void JNICALL

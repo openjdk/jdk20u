@@ -113,7 +113,10 @@
 #include <errno.h>
 
 /* MODIFY START */
+
 #include "runtime/adaptive_thread_factory_monitor.hpp"
+#include "runtime/adaptive_thread_factory_monitors.hpp"
+
 /* MODIFY END */
 
 /*
@@ -711,9 +714,19 @@ JVM_LEAF(jboolean, JVM_IsFinalizationEnabled(JNIEnv * env))
 JVM_END
 
 /* MODIFY START */
-JVM_ENTRY(jint, JVM_AdaptiveThreadFactoryTest(JNIEnv *env, jobject adaptiveThreadFactory))
-  return (jint)AdaptiveThreadFactoryMonitor::getNumberOfMonitoredThreads();
+
+//JVM_ENTRY(jint, JVM_AdaptiveThreadFactoryTest(JNIEnv *env, jclass adaptiveThreadFactoryClass))
+//  return (jint)AdaptiveThreadFactoryMonitor::getNumberOfMonitoredThreads();
+//JVM_END
+
+JVM_ENTRY(jboolean, JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
+  return (jboolean)AdaptiveThreadFactoryMonitors::answerQuery(adaptiveThreadFactoryId);
 JVM_END
+
+JVM_ENTRY(void, JVM_RegisterWithMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
+  AdaptiveThreadFactoryMonitors::associateWithMonitor(adaptiveThreadFactoryId);
+JVM_END
+
 /* MODIFY END */
 
 // jdk.internal.vm.Continuation /////////////////////////////////////////////////////

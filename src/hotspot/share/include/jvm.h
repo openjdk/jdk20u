@@ -795,8 +795,16 @@ JNIEXPORT jboolean JNICALL
 JVM_IsFinalizationEnabled(JNIEnv *env);
 
 /* START MODIFY */
-JNIEXPORT jint JNICALL
-JVM_AdaptiveThreadFactoryTest(JNIEnv *env, jobject adaptiveThreadFactory);
+
+//JNIEXPORT jint JNICALL
+//JVM_AdaptiveThreadFactoryTest(JNIEnv *env, jclass adaptiveThreadFactoryClass);
+
+JNIEXPORT jboolean JNICALL
+JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
+
+JNIEXPORT void JNICALL
+JVM_RegisterWithMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
+
 /* END MODIFY */
 
 /*************************************************************************

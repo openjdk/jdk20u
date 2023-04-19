@@ -208,7 +208,9 @@ JVM_UnloadLibrary
 JVM_WaitForReferencePendingList
 JVM_Yield
 # MODIFY START
-JVM_AdaptiveThreadFactoryTest
+#JVM_AdaptiveThreadFactoryTest
+JVM_QueryMonitor
+JVM_RegisterWithMonitor
 # MODIFY END
 
 # Module related API's
