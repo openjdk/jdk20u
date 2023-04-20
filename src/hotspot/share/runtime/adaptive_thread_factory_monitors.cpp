@@ -17,7 +17,8 @@ void AdaptiveThreadFactoryMonitors::initialiseAdaptiveThreadFactoryMonitors() {
 }
 
 void AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId) {
-
+    AdaptiveThreadFactoryMonitor* newAdaptiveThreadFactoryMonitor = new AdaptiveThreadFactoryMonitor(adaptiveThreadFactoryId);
+    _adaptiveThreadFactoryMonitors->put(adaptiveThreadFactoryId, *newAdaptiveThreadFactoryMonitor);
 }
 
 bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {

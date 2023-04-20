@@ -14,13 +14,6 @@ class SimpleConcurrentHashMap : public ResourceObj {
 
         pthread_mutex_t _mutex;
         int _numberBuckets;
-        /*
-        struct Entry {
-            K key;
-            V value;
-            Entry* next;
-        };
-        */
         SimpleConcurrentHashMapEntry<K, V>** _buckets;
         int(*_mapKeyToInteger)(K);
         int hash(const K& key) {

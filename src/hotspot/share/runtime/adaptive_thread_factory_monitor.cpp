@@ -1,11 +1,15 @@
 #include "runtime/adaptive_thread_factory_monitor.hpp"
 
-AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId): _adaptiveThreadFactoryId(adaptiveThreadFactoryId) {}
+AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor() {}
 
-AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitor::operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor) {
-    _adaptiveThreadFactoryId = adaptiveThreadFactoryMonitor._adaptiveThreadFactoryId;
-    return *this;
+AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId) { 
+    _adaptiveThreadFactoryId = adaptiveThreadFactoryId;
 }
+
+//AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitor::operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor) {
+//    _adaptiveThreadFactoryId = adaptiveThreadFactoryMonitor._adaptiveThreadFactoryId;
+//    return *this;
+//}
 
 // AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor() {
 //     _numberMonitoredThreads.store(0);
