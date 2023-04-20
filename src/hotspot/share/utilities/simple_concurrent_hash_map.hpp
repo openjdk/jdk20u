@@ -2,6 +2,7 @@
 #define SHARE_UTILITIES_SIMPLE_CONCURRENT_HASH_MAP_HPP
 
 #include "memory/allocation.hpp"
+#include "utilities/simple_concurrent_hash_map_entry.hpp"
 
 #include <stdlib.h> 
 #include <pthread.h>
@@ -13,12 +14,14 @@ class SimpleConcurrentHashMap : public ResourceObj {
 
         pthread_mutex_t _mutex;
         int _numberBuckets;
+        /*
         struct Entry {
             K key;
             V value;
             Entry* next;
         };
-        Entry** _buckets;
+        */
+        SimpleConcurrentHashMapEntry<K, V>** _buckets;
         int(*_mapKeyToInteger)(K);
         int hash(const K& key) {
             return _mapKeyToInteger(key) % _numberBuckets;
@@ -29,18 +32,17 @@ class SimpleConcurrentHashMap : public ResourceObj {
         SimpleConcurrentHashMap(int numberBuckets, int(*mapKeyToInteger)(K)) {
             _numberBuckets = numberBuckets;
             _mapKeyToInteger = mapKeyToInteger;
-            _buckets = (Entry**)malloc(_numberBuckets * sizeof(Entry*));
+            _buckets = (SimpleConcurrentHashMapEntry<K, V>**)malloc(_numberBuckets * sizeof(SimpleConcurrentHashMapEntry<K, V>*));
             for(int i = 0; i < _numberBuckets; i += 1) {
                 _buckets[i] = nullptr;
             }
         }
 
-        /*
         ~SimpleConcurrentHashMap() {
             for(int i = 0; i < _numberBuckets; i += 1) {
-                Entry* current = _buckets[i];
+                SimpleConcurrentHashMapEntry<K, V>* current = _buckets[i];
                 while (current != nullptr) {
-                    Entry* next = current->next;
+                    SimpleConcurrentHashMapEntry<K, V>* next = current->next;
                     delete current;
                     current = next;
                 }
@@ -48,8 +50,8 @@ class SimpleConcurrentHashMap : public ResourceObj {
             }
             delete _buckets;
         }
-        */
 
+       /*
         SimpleConcurrentHashMap& operator=(const SimpleConcurrentHashMap& other) {
             if(this != &other) {
                 _numberBuckets = other._numberBuckets;
@@ -75,11 +77,12 @@ class SimpleConcurrentHashMap : public ResourceObj {
             }
             return *this;
         }
+        */
 
         void put(const K& key, const V& value) {
             pthread_mutex_lock(&_mutex);
             int bucketIndex = hash(key);
-            Entry* current = _buckets[bucketIndex];
+            SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
                 if(current->key == key) {
                     current->value = value;
@@ -87,7 +90,8 @@ class SimpleConcurrentHashMap : public ResourceObj {
                 }
                 current = current->next;
             }
-            Entry* newEntry = (Entry*)malloc(sizeof(Entry));
+            //Entry* newEntry = (Entry*)malloc(sizeof(Entry));
+            SimpleConcurrentHashMapEntry<K, V>* newEntry = new SimpleConcurrentHashMapEntry<K, V>();
             newEntry->key = key;
             newEntry->value = value;
             newEntry->next = _buckets[bucketIndex];
@@ -98,7 +102,7 @@ class SimpleConcurrentHashMap : public ResourceObj {
         V& get(const K& key) {
             pthread_mutex_lock(&_mutex);
             int bucketIndex = hash(key);
-            Entry* current = _buckets[bucketIndex];
+            SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
                 if(current->key == key) {
                     return current->value;

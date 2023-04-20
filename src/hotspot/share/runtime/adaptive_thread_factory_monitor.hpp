@@ -1,9 +1,11 @@
 #ifndef SHARE_RUNTIME_ADAPTIVE_THREAD_FACTORY_MONITOR_HPP
 #define SHARE_RUNTIME_ADAPTIVE_THREAD_FACTORY_MONITOR_HPP
 
+#include "memory/allocation.hpp"
+
 #include <atomic>
 
-class AdaptiveThreadFactoryMonitor {
+class AdaptiveThreadFactoryMonitor : public ResourceObj {
     private:
         //std::atomic<int> _numberMonitoredThreads;
         int _adaptiveThreadFactoryId;
