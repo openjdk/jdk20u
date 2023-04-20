@@ -6,7 +6,7 @@
 #include <atomic>
 
 class AdaptiveThreadFactoryMonitor : public ResourceObj {
-    private:
+    public:
         //std::atomic<int> _numberMonitoredThreads;
         int _adaptiveThreadFactoryId;
     public:

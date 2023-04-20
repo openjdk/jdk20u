@@ -93,7 +93,7 @@ void stubRoutines_init2(); // note: StubRoutines need 2-phase init
 void continuations_init(); // depends on flags (UseCompressedOops) and barrier sets
 
 /* MODIFY START */
-void adaptive_thread_factory_initialisation();
+void adaptive_thread_factory_monitors_initialisation();
 /* MODIFY END */
 
 // Do not disable thread-local-storage, as it is important for some
@@ -173,7 +173,7 @@ jint init_globals() {
   }
 
   /* MODIFY START */
-  //adaptive_thread_factory_initialisation();
+  adaptive_thread_factory_monitors_initialisation();
   /* MODIFY END */
 
   return JNI_OK;

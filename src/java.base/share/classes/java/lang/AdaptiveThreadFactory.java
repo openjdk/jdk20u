@@ -24,6 +24,7 @@ public class AdaptiveThreadFactory implements ThreadFactory {
      */
     public AdaptiveThreadFactory(int adaptiveThreadFactoryId) {
         this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+        addMonitor(this.adaptiveThreadFactoryId);
         this.platformThreadFactory = Thread.ofPlatform().factory();
         this.virtualThreadFactory = Thread.ofVirtual().factory();
     }
@@ -55,6 +56,8 @@ public class AdaptiveThreadFactory implements ThreadFactory {
         };
         return augmentedTask;
     }
+
+    private native void addMonitor(int adaptiveThreadFactoryId);
 
     private native boolean queryMonitor(int adaptiveThreadFactoryId);
 

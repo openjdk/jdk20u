@@ -12,8 +12,9 @@ class SimpleConcurrentHashMap : public ResourceObj {
 
     private:
 
-        pthread_mutex_t _mutex;
+        pthread_mutex_t _lock;
         int _numberBuckets;
+        V _defaultValue;
         SimpleConcurrentHashMapEntry<K, V>** _buckets;
         int(*_mapKeyToInteger)(K);
         int hash(const K& key) {
@@ -22,13 +23,15 @@ class SimpleConcurrentHashMap : public ResourceObj {
         
     public:
 
-        SimpleConcurrentHashMap(int numberBuckets, int(*mapKeyToInteger)(K)) {
+        SimpleConcurrentHashMap(int numberBuckets, int(*mapKeyToInteger)(K), const V& defaultValue) {
             _numberBuckets = numberBuckets;
             _mapKeyToInteger = mapKeyToInteger;
+            _defaultValue = _defaultValue;
             _buckets = (SimpleConcurrentHashMapEntry<K, V>**)malloc(_numberBuckets * sizeof(SimpleConcurrentHashMapEntry<K, V>*));
             for(int i = 0; i < _numberBuckets; i += 1) {
                 _buckets[i] = nullptr;
             }
+            pthread_mutex_init(&_lock, NULL);
         }
 
         ~SimpleConcurrentHashMap() {
@@ -73,7 +76,7 @@ class SimpleConcurrentHashMap : public ResourceObj {
         */
 
         void put(const K& key, const V& value) {
-            pthread_mutex_lock(&_mutex);
+            pthread_mutex_lock(&_lock);
             int bucketIndex = hash(key);
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
@@ -83,26 +86,27 @@ class SimpleConcurrentHashMap : public ResourceObj {
                 }
                 current = current->next;
             }
-            //Entry* newEntry = (Entry*)malloc(sizeof(Entry));
             SimpleConcurrentHashMapEntry<K, V>* newEntry = new SimpleConcurrentHashMapEntry<K, V>();
             newEntry->key = key;
             newEntry->value = value;
             newEntry->next = _buckets[bucketIndex];
             _buckets[bucketIndex] = newEntry;
-            pthread_mutex_unlock(&_mutex);
+            pthread_mutex_unlock(&_lock);
         }
 
-        V& get(const K& key) {
-            pthread_mutex_lock(&_mutex);
+        const V& get(const K& key) {
+            pthread_mutex_lock(&_lock);
             int bucketIndex = hash(key);
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
                 if(current->key == key) {
-                    return current->value;
+                    const V& result = current->value;
+                    pthread_mutex_unlock(&_lock);
+                    return result;
                 }
                 current = current->next;
             }
-            pthread_mutex_unlock(&_mutex);
+            return _defaultValue;
         }
 };
 
