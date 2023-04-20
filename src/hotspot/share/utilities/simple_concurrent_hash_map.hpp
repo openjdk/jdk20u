@@ -1,11 +1,13 @@
 #ifndef SHARE_UTILITIES_SIMPLE_CONCURRENT_HASH_MAP_HPP
 #define SHARE_UTILITIES_SIMPLE_CONCURRENT_HASH_MAP_HPP
 
+#include "memory/allocation.hpp"
+
 #include <stdlib.h> 
 #include <pthread.h>
 
 template <typename K, typename V>
-class SimpleConcurrentHashMap {
+class SimpleConcurrentHashMap : public ResourceObj {
 
     private:
 
@@ -16,7 +18,7 @@ class SimpleConcurrentHashMap {
             V value;
             Entry* next;
         };
-        Entry* _buckets;
+        Entry** _buckets;
         int(*_mapKeyToInteger)(K);
         int hash(const K& key) {
             return _mapKeyToInteger(key) % _numberBuckets;
@@ -24,14 +26,16 @@ class SimpleConcurrentHashMap {
         
     public:
 
-        SimpleConcurrentHashMap(int numberBuckets) {
+        SimpleConcurrentHashMap(int numberBuckets, int(*mapKeyToInteger)(K)) {
             _numberBuckets = numberBuckets;
-            _buckets = (Entry*)malloc(_numberBuckets * sizeof(Entry));
+            _mapKeyToInteger = mapKeyToInteger;
+            _buckets = (Entry**)malloc(_numberBuckets * sizeof(Entry*));
             for(int i = 0; i < _numberBuckets; i += 1) {
                 _buckets[i] = nullptr;
             }
         }
 
+        /*
         ~SimpleConcurrentHashMap() {
             for(int i = 0; i < _numberBuckets; i += 1) {
                 Entry* current = _buckets[i];
@@ -43,6 +47,33 @@ class SimpleConcurrentHashMap {
                 _buckets[i] = nullptr;
             }
             delete _buckets;
+        }
+        */
+
+        SimpleConcurrentHashMap& operator=(const SimpleConcurrentHashMap& other) {
+            if(this != &other) {
+                _numberBuckets = other._numberBuckets;
+                _mapKeyToInteger = other._mapKeyToInteger;
+                _buckets = (Entry*)malloc(_numberBuckets * sizeof(Entry));
+                for (int i = 0; i < _numberBuckets; i += 1) {
+                    Entry* current = other._buckets[i];
+                    Entry* previous = nullptr;
+                    while(current != nullptr) {
+                        Entry* newEntry = (Entry*)malloc(sizeof(Entry));
+                        newEntry->key = current->key;
+                        newEntry->value = current->value;
+                        newEntry->next = nullptr;
+                        if(previous == nullptr) {
+                            _buckets[i] = newEntry;
+                        } else {
+                            previous->next = newEntry;
+                        }
+                        previous = newEntry;
+                        current = current->next;
+                    }
+                }
+            }
+            return *this;
         }
 
         void put(const K& key, const V& value) {

@@ -10,7 +10,7 @@ class AdaptiveThreadFactoryMonitor {
     public:
         AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
         //AdaptiveThreadFactoryMonitor();
-        //AdaptiveThreadFactoryMonitor& operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor);
+        AdaptiveThreadFactoryMonitor& operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor);
         //static AdaptiveThreadFactoryMonitor _adaptive_thread_factory_monitor;
         //static void initialiseAdaptiveThreadFactoryMonitor();
         //static void incrementNumberOfMonitoredThreads();
