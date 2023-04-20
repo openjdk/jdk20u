@@ -27,7 +27,9 @@ bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
 }
 
 void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFactoryId) {
-    //pthread_setspecific(_monitorAccessKey, &);
+    const AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
+    // TO DO: check whether default value is returned
+    pthread_setspecific(_monitorAccessKey, &associatedMonitor);
 }
 
 void adaptive_thread_factory_monitors_initialisation() {
