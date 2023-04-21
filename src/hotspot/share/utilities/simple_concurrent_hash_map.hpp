@@ -7,8 +7,12 @@
 #include <stdlib.h> 
 #include <pthread.h>
 
+#include <sys/syscall.h>
+#include <stdio.h>
+#include <unistd.h>
+
 template <typename K, typename V>
-class SimpleConcurrentHashMap : public ResourceObj {
+class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
 
     private:
 
@@ -24,20 +28,11 @@ class SimpleConcurrentHashMap : public ResourceObj {
     public:
 
         SimpleConcurrentHashMap(int numberBuckets, int(*mapKeyToInteger)(K), const V& defaultValue) {
-            /*
-            _lock = PTHREAD_MUTEX_INITIALIZER;
-            pthread_mutexattr_t mutext_attribute;
-            pthread_mutexattr_init(&mutext_attribute);
-            pthread_mutexattr_settype(&mutext_attribute, PTHREAD_MUTEX_NORMAL);
-            if(pthread_mutex_init(&_lock, &mutext_attribute) != 0) {                                                                                           
-                exit(1);                                                                    
-            }   
-            pthread_mutexattr_destroy(&mutext_attribute);
-            */
-            _lock = PTHREAD_MUTEX_INITIALIZER;
+            //fprintf(stderr, "constructor: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
             if(pthread_mutex_init(&_lock, NULL) != 0) {                                                                                           
                 exit(1);                                                                    
             }  
+            //fprintf(stderr, "constructor: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);   
             _numberBuckets = numberBuckets;
             _mapKeyToInteger = mapKeyToInteger;
@@ -46,10 +41,14 @@ class SimpleConcurrentHashMap : public ResourceObj {
             for(int i = 0; i < _numberBuckets; i += 1) {
                 _buckets[i] = nullptr;
             }
+            //fprintf(stderr, "constructor: %s\n", "before release");
             pthread_mutex_unlock(&_lock);
+            //fprintf(stderr, "constructor: %s\n", "after release");
         }
 
         ~SimpleConcurrentHashMap() {
+            //fprintf(stderr, "destructor: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
+            //fprintf(stderr, "destructor: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);
             for(int i = 0; i < _numberBuckets; i += 1) {
                 SimpleConcurrentHashMapEntry<K, V>* current = _buckets[i];
@@ -61,46 +60,24 @@ class SimpleConcurrentHashMap : public ResourceObj {
                 _buckets[i] = nullptr;
             }
             delete _buckets;
+            //fprintf(stderr, "destructor: %s\n", "before release");
             pthread_mutex_unlock(&_lock);
+            //fprintf(stderr, "destructor: %s\n", "after release");
             pthread_mutex_destroy(&_lock);
         }
 
-       /*
-        SimpleConcurrentHashMap& operator=(const SimpleConcurrentHashMap& other) {
-            if(this != &other) {
-                _numberBuckets = other._numberBuckets;
-                _mapKeyToInteger = other._mapKeyToInteger;
-                _buckets = (Entry*)malloc(_numberBuckets * sizeof(Entry));
-                for (int i = 0; i < _numberBuckets; i += 1) {
-                    Entry* current = other._buckets[i];
-                    Entry* previous = nullptr;
-                    while(current != nullptr) {
-                        Entry* newEntry = (Entry*)malloc(sizeof(Entry));
-                        newEntry->key = current->key;
-                        newEntry->value = current->value;
-                        newEntry->next = nullptr;
-                        if(previous == nullptr) {
-                            _buckets[i] = newEntry;
-                        } else {
-                            previous->next = newEntry;
-                        }
-                        previous = newEntry;
-                        current = current->next;
-                    }
-                }
-            }
-            return *this;
-        }
-        */
-
         void put(const K& key, const V& value) {
+            //fprintf(stderr, "put: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
+            //fprintf(stderr, "put: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);
             int bucketIndex = hash(key);
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
                 if(current->key == key) {
                     current->value = value;
+                    //fprintf(stderr, "put: %s\n", "before release");
                     pthread_mutex_unlock(&_lock);
+                    //fprintf(stderr, "put: %s\n", "after release");
                     return;
                 }
                 current = current->next;
@@ -110,22 +87,30 @@ class SimpleConcurrentHashMap : public ResourceObj {
             newEntry->value = value;
             newEntry->next = _buckets[bucketIndex];
             _buckets[bucketIndex] = newEntry;
+            //fprintf(stderr, "put: %s\n", "before release");
             pthread_mutex_unlock(&_lock);
+            //fprintf(stderr, "put: %s\n", "after release");
         }
 
         const V& get(const K& key) {
+            //fprintf(stderr, "get: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
+            //fprintf(stderr, "get: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);
             int bucketIndex = hash(key);
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
                 if(current->key == key) {
                     const V& result = current->value;
+                    //fprintf(stderr, "get: %s\n", "before release");
                     pthread_mutex_unlock(&_lock);
+                    //fprintf(stderr, "get: %s\n", "after release");
                     return result;
                 }
                 current = current->next;
             }
+            //fprintf(stderr, "get: %s\n", "before release");
             pthread_mutex_unlock(&_lock);
+            //fprintf(stderr, "get: %s\n", "after release");
             return _defaultValue;
         }
 };

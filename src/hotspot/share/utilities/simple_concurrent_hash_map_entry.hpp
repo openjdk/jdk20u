@@ -4,7 +4,7 @@
 #include "memory/allocation.hpp"
 
 template <typename K, typename V>
-class SimpleConcurrentHashMapEntry : public ResourceObj {
+class SimpleConcurrentHashMapEntry : public CHeapObj<mtInternal> {
     public:
         K key;
         V value;
