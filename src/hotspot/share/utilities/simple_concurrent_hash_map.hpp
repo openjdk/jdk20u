@@ -24,17 +24,33 @@ class SimpleConcurrentHashMap : public ResourceObj {
     public:
 
         SimpleConcurrentHashMap(int numberBuckets, int(*mapKeyToInteger)(K), const V& defaultValue) {
+            /*
+            _lock = PTHREAD_MUTEX_INITIALIZER;
+            pthread_mutexattr_t mutext_attribute;
+            pthread_mutexattr_init(&mutext_attribute);
+            pthread_mutexattr_settype(&mutext_attribute, PTHREAD_MUTEX_NORMAL);
+            if(pthread_mutex_init(&_lock, &mutext_attribute) != 0) {                                                                                           
+                exit(1);                                                                    
+            }   
+            pthread_mutexattr_destroy(&mutext_attribute);
+            */
+            _lock = PTHREAD_MUTEX_INITIALIZER;
+            if(pthread_mutex_init(&_lock, NULL) != 0) {                                                                                           
+                exit(1);                                                                    
+            }  
+            pthread_mutex_lock(&_lock);   
             _numberBuckets = numberBuckets;
             _mapKeyToInteger = mapKeyToInteger;
-            _defaultValue = _defaultValue;
+            _defaultValue = defaultValue;
             _buckets = (SimpleConcurrentHashMapEntry<K, V>**)malloc(_numberBuckets * sizeof(SimpleConcurrentHashMapEntry<K, V>*));
             for(int i = 0; i < _numberBuckets; i += 1) {
                 _buckets[i] = nullptr;
             }
-            pthread_mutex_init(&_lock, NULL);
+            pthread_mutex_unlock(&_lock);
         }
 
         ~SimpleConcurrentHashMap() {
+            pthread_mutex_lock(&_lock);
             for(int i = 0; i < _numberBuckets; i += 1) {
                 SimpleConcurrentHashMapEntry<K, V>* current = _buckets[i];
                 while (current != nullptr) {
@@ -45,6 +61,8 @@ class SimpleConcurrentHashMap : public ResourceObj {
                 _buckets[i] = nullptr;
             }
             delete _buckets;
+            pthread_mutex_unlock(&_lock);
+            pthread_mutex_destroy(&_lock);
         }
 
        /*
@@ -82,6 +100,7 @@ class SimpleConcurrentHashMap : public ResourceObj {
             while(current != nullptr) {
                 if(current->key == key) {
                     current->value = value;
+                    pthread_mutex_unlock(&_lock);
                     return;
                 }
                 current = current->next;
@@ -106,6 +125,7 @@ class SimpleConcurrentHashMap : public ResourceObj {
                 }
                 current = current->next;
             }
+            pthread_mutex_unlock(&_lock);
             return _defaultValue;
         }
 };

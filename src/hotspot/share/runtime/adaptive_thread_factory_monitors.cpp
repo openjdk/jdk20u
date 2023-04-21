@@ -13,7 +13,7 @@ pthread_key_t AdaptiveThreadFactoryMonitors::_monitorAccessKey = []{
 void AdaptiveThreadFactoryMonitors::initialiseAdaptiveThreadFactoryMonitors() {
     int numberBuckets = 32;
     int(*mapKeyToInteger)(int) = [](int key){ return key; };
-    AdaptiveThreadFactoryMonitor* defaultValue = new AdaptiveThreadFactoryMonitor(-1);
+    AdaptiveThreadFactoryMonitor* defaultValue = new AdaptiveThreadFactoryMonitor(0);
     _adaptiveThreadFactoryMonitors = new SimpleConcurrentHashMap<int, AdaptiveThreadFactoryMonitor>(numberBuckets, mapKeyToInteger, *defaultValue);
 }
 
@@ -23,7 +23,7 @@ void AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(int adaptive
 }
 
 bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
-    return true;
+    return false;
 }
 
 void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFactoryId) {
