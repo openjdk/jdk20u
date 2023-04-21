@@ -1,16 +1,18 @@
+#include "runtime/adaptive_thread_factory_utility.hpp"
 #include "runtime/adaptive_thread_factory_monitors.hpp"
 
 #include <stdlib.h> 
 
 SimpleConcurrentHashMap<int, AdaptiveThreadFactoryMonitor>* AdaptiveThreadFactoryMonitors::_adaptiveThreadFactoryMonitors;
 
-pthread_key_t AdaptiveThreadFactoryMonitors::_monitorAccessKey = []{
+const pthread_key_t AdaptiveThreadFactoryMonitors::_monitorAccessKey = []{
   pthread_key_t key;
   pthread_key_create(&key, NULL);
   return key;
 }();
 
 void AdaptiveThreadFactoryMonitors::initialiseAdaptiveThreadFactoryMonitors() {
+    // create map
     int numberBuckets = 32;
     int(*mapKeyToInteger)(int) = [](int key){ return key; };
     AdaptiveThreadFactoryMonitor* defaultValue = new AdaptiveThreadFactoryMonitor(0);
@@ -28,7 +30,10 @@ bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
 
 void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFactoryId) {
     const AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
-    // TO DO: check whether default value is returned
+    AdaptiveThreadFactoryUtility::checkRequirement(
+       associatedMonitor.getId() == adaptiveThreadFactoryId,
+       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
+    );
     pthread_setspecific(_monitorAccessKey, &associatedMonitor);
 }
 

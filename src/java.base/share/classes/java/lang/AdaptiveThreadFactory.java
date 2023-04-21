@@ -5,7 +5,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * Comment
  */
-public class AdaptiveThreadFactory implements ThreadFactory {
+public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
     private static native void registerNatives();
     static {
@@ -49,13 +49,23 @@ public class AdaptiveThreadFactory implements ThreadFactory {
         }
     }
 
+    /*
+     * Comment
+     */
+    public void close() {
+        // TO DO: remove monitor
+    }
+
     private Runnable augmentTask(Runnable originalTask) {
         final Runnable augmentedTask = () -> {
             registerWithMonitor(this.adaptiveThreadFactoryId);
             originalTask.run();
+            // TO DO: deregister from monitor
         };
         return augmentedTask;
     }
+
+    /* Native methods */
 
     private native void addMonitor(int adaptiveThreadFactoryId);
 

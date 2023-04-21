@@ -3,7 +3,7 @@
 
 #include "memory/allocation.hpp"
 
-#include <atomic>
+//#include <atomic>
 
 class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
     private:
@@ -12,6 +12,7 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
     public:
         AdaptiveThreadFactoryMonitor();
         AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
+        int getId() const;
         //AdaptiveThreadFactoryMonitor();
         //AdaptiveThreadFactoryMonitor& operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor);
         //static AdaptiveThreadFactoryMonitor _adaptive_thread_factory_monitor;

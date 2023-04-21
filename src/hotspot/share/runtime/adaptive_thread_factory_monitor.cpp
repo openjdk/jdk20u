@@ -6,6 +6,10 @@ AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFac
     _adaptiveThreadFactoryId = adaptiveThreadFactoryId;
 }
 
+int AdaptiveThreadFactoryMonitor::getId() const {
+    return _adaptiveThreadFactoryId;
+}
+
 //AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitor::operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor) {
 //    _adaptiveThreadFactoryId = adaptiveThreadFactoryMonitor._adaptiveThreadFactoryId;
 //    return *this;

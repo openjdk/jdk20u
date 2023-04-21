@@ -9,10 +9,9 @@
 
 class AdaptiveThreadFactoryMonitors : AllStatic {
     private:
-        // NEXT: initialise map during global initialisation by providing initialisation function
         static SimpleConcurrentHashMap<int, AdaptiveThreadFactoryMonitor>* _adaptiveThreadFactoryMonitors;
     public:
-        static pthread_key_t _monitorAccessKey;
+        static const pthread_key_t _monitorAccessKey;
         static void initialiseAdaptiveThreadFactoryMonitors();
         static void addAdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
         static bool answerQuery(int adaptiveThreadFactoryId);
