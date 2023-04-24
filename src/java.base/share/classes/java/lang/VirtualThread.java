@@ -424,12 +424,18 @@ final class VirtualThread extends BaseVirtualThread {
         // unmount
         if (notifyJvmti) notifyJvmtiUnmountBegin(false);
         unmount();
+        /* MODIFY START */
+            
+        /* MODIFY END */
         try {
             return Continuation.yield(VTHREAD_SCOPE);
         } finally {
             // re-mount
             mount();
             if (notifyJvmti) notifyJvmtiMountEnd(false);
+            /* MODIFY START */
+
+            /* MODIFY END */
         }
     }
 

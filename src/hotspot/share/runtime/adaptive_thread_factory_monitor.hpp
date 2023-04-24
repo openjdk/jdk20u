@@ -16,6 +16,7 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
         AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
         int getFactoryId() const;
         const long& addJavaLevelThreadId(long javaLevelThreadId);
+        void removeJavaLevelThreadId(long javaLevelThreadId);
         //AdaptiveThreadFactoryMonitor();
         //AdaptiveThreadFactoryMonitor& operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor);
         //static AdaptiveThreadFactoryMonitor _adaptive_thread_factory_monitor;

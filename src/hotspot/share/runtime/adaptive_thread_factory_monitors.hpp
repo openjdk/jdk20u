@@ -17,6 +17,7 @@ class AdaptiveThreadFactoryMonitors : AllStatic {
         static void addAdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
         static bool answerQuery(int adaptiveThreadFactoryId);
         static void associateWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);
+        static void disassociateFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);
 };
 
 #endif // SHARE_RUNTIME_ADAPTIVE_THREAD_FACTORY_MONITORS_HPP

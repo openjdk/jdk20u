@@ -22,6 +22,10 @@ const long& AdaptiveThreadFactoryMonitor::addJavaLevelThreadId(long javaLevelThr
     return _javaLevelThreadIds->get(javaLevelThreadId);
 }
 
+void AdaptiveThreadFactoryMonitor::removeJavaLevelThreadId(long javaLevelThreadId) {
+    _javaLevelThreadIds->remove(javaLevelThreadId);
+}
+
 //AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitor::operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor) {
 //    _adaptiveThreadFactoryId = adaptiveThreadFactoryMonitor._adaptiveThreadFactoryId;
 //    return *this;

@@ -45,6 +45,17 @@ void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFacto
     pthread_setspecific(_javaLevelThreadIdAccessKey, &registeredJavaLevelThreadId);
 }
 
+void AdaptiveThreadFactoryMonitors::disassociateFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
+    AdaptiveThreadFactoryUtility::checkRequirement(
+       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
+       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
+    );
+    associatedMonitor.removeJavaLevelThreadId(javaLevelThreadId);
+    pthread_setspecific(_monitorAccessKey, nullptr);
+    pthread_setspecific(_javaLevelThreadIdAccessKey, nullptr);
+}
+
 void adaptive_thread_factory_monitors_initialisation() {
     AdaptiveThreadFactoryMonitors::initialiseAdaptiveThreadFactoryMonitors();
 }
