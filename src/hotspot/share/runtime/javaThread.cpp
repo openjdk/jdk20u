@@ -156,7 +156,7 @@ void JavaThread::set_threadOopHandles(oop p) {
   assert(_thread_oop_storage != NULL, "not yet initialized");
   _threadObj   = OopHandle(_thread_oop_storage, p);
   _vthread     = OopHandle(_thread_oop_storage, p);
-  _jvmti_vthread = OopHandle(_thread_oop_storage, NULL);
+  _jvmti_vthread = OopHandle(_thread_oop_storage, p->is_a(vmClasses::BoundVirtualThread_klass()) ? p : NULL);
   _scopedValueCache = OopHandle(_thread_oop_storage, NULL);
 }
 

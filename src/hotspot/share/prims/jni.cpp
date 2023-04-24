@@ -3133,7 +3133,7 @@ JNI_END
 
 JNI_ENTRY(jboolean, jni_IsVirtualThread(JNIEnv* env, jobject obj))
   oop thread_obj = JNIHandles::resolve_external_guard(obj);
-  if (thread_obj != NULL && thread_obj->is_a(vmClasses::BasicVirtualThread_klass())) {
+  if (thread_obj != NULL && thread_obj->is_a(vmClasses::BaseVirtualThread_klass())) {
     return JNI_TRUE;
   } else {
     return JNI_FALSE;
@@ -3983,13 +3983,6 @@ jint JNICALL jni_GetEnv(JavaVM *vm, void **penv, jint version) {
   if (vm_created == 0) {
     *penv = NULL;
     ret = JNI_EDETACHED;
-    return ret;
-  }
-
-  // No JVM TI with --enable-preview and no continuations support.
-  if (!VMContinuations && Arguments::enable_preview() && JvmtiExport::is_jvmti_version(version)) {
-    *penv = NULL;
-    ret = JNI_EVERSION;
     return ret;
   }
 
