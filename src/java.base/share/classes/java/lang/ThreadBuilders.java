@@ -243,6 +243,19 @@ class ThreadBuilders {
             return new VirtualThreadFactory(scheduler, name(), counter(), characteristics(),
                     uncaughtExceptionHandler());
         }
+
+        /* MODIFY START */
+        ThreadFactory factory(int adaptiveThreadFactoryId) {
+            return new VirtualThreadFactoryForAdaptiveThreadFactory(
+                scheduler, 
+                name(), 
+                counter(), 
+                characteristics(),
+                uncaughtExceptionHandler(),
+                adaptiveThreadFactoryId
+            );
+        }
+        /* MODIFY END */
     }
 
     /**
@@ -373,6 +386,38 @@ class ThreadBuilders {
         }
     }
 
+    /* MODIFY START */
+
+    private static class VirtualThreadFactoryForAdaptiveThreadFactory extends VirtualThreadFactory {
+        
+        private final int adaptiveThreadFactoryId;
+
+        public VirtualThreadFactoryForAdaptiveThreadFactory(
+            Executor scheduler,
+            String name,
+            long start,
+            int characteristics,
+            UncaughtExceptionHandler uhe,
+            int adaptiveThreadFactoryId
+        ) {
+            super(scheduler, name, start, characteristics, uhe);
+            this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+        }
+
+        @Override
+        public Thread newThread(Runnable task) {
+            Objects.requireNonNull(task);
+            String name = nextThreadName();
+            Thread thread = newVirtualThread(scheduler, name, characteristics(), task, this.adaptiveThreadFactoryId);
+            UncaughtExceptionHandler uhe = uncaughtExceptionHandler();
+            if (uhe != null)
+                thread.uncaughtExceptionHandler(uhe);
+            return thread;
+        }
+    }
+    
+    /* MODIFY END */
+
     /**
      * Creates a new virtual thread to run the given task.
      */
@@ -388,6 +433,26 @@ class ThreadBuilders {
             return new BoundVirtualThread(name, characteristics, task);
         }
     }
+
+    /* MODIFY START */
+
+    static Thread newVirtualThread(
+        Executor scheduler,
+        String name,
+        int characteristics,
+        Runnable task,
+        int adaptiveThreadFactoryId
+    ) {
+        if (ContinuationSupport.isSupported()) {
+            return new VirtualThread(scheduler, name, characteristics, task, adaptiveThreadFactoryId);
+        } else {
+            if (scheduler != null)
+                throw new UnsupportedOperationException();
+            return new BoundVirtualThread(name, characteristics, task);
+        }
+    }
+
+    /* MODIFY END */
 
     /**
      * A "virtual thread" that is backed by a platform thread. This implementation

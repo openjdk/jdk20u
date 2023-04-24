@@ -66,6 +66,34 @@ import static java.util.concurrent.TimeUnit.*;
  * system.
  */
 final class VirtualThread extends BaseVirtualThread {
+
+    /* MODIFY START */
+
+    private class AdaptiveThreadFactoryAssociationInformation {
+        private boolean isAssociatedWithAdaptiveThreadFactory;
+        private int adaptiveThreadFactoryId;
+        public AdaptiveThreadFactoryAssociationInformation() {
+            this.isAssociatedWithAdaptiveThreadFactory = false;
+        }
+        public AdaptiveThreadFactoryAssociationInformation(int adaptiveThreadFactoryId) {
+            this.isAssociatedWithAdaptiveThreadFactory = true;
+            this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+        }
+        public boolean isAssociatedWithAdaptiveThreadFactory() {
+            return this.isAssociatedWithAdaptiveThreadFactory;
+        }
+        public int getAdaptiveThreadFactoryId() {
+            if(!this.isAssociatedWithAdaptiveThreadFactory) {
+                throw new UnsupportedOperationException("The virtual thread is not associated with an adaptive tread factory.");
+            }
+            return this.adaptiveThreadFactoryId;
+        }
+    }
+
+    private AdaptiveThreadFactoryAssociationInformation adaptiveThreadFactoryAssociationInformation;
+
+    /* MODIFY END */
+
     private static final Unsafe U = Unsafe.getUnsafe();
     private static final ContinuationScope VTHREAD_SCOPE = new ContinuationScope("VirtualThreads");
     private static final ForkJoinPool DEFAULT_SCHEDULER = createDefaultScheduler();
@@ -167,7 +195,24 @@ final class VirtualThread extends BaseVirtualThread {
         this.scheduler = scheduler;
         this.cont = new VThreadContinuation(this, task);
         this.runContinuation = this::runContinuation;
+
+        /* MODIFY START */
+        this.adaptiveThreadFactoryAssociationInformation = new AdaptiveThreadFactoryAssociationInformation();
+        /* MODIFY END */
     }
+
+    /* MODIFY START */
+    VirtualThread(
+        Executor scheduler, 
+        String name, 
+        int characteristics, 
+        Runnable task,
+        int adaptiveThreadFactoryId
+    ) {
+        this(scheduler, name, characteristics, task);
+        this.adaptiveThreadFactoryAssociationInformation = new AdaptiveThreadFactoryAssociationInformation(adaptiveThreadFactoryId);
+    }
+    /* MODIFY END */
 
     /**
      * The continuation that a virtual thread executes.
