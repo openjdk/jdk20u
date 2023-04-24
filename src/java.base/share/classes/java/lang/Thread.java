@@ -748,6 +748,10 @@ public class Thread implements Runnable {
         // Special value to indicate this is a newly-created Thread
         // Note that his must match the declaration in ScopedValue.
         this.scopedValueBindings = NEW_THREAD_BINDINGS;
+
+        /* MODIFY START */
+        this.adaptiveThreadFactoryAssociationInformation = new AdaptiveThreadFactoryAssociationInformation();
+        /* MODIFY END */
     }
 
     /**
@@ -798,6 +802,10 @@ public class Thread implements Runnable {
         } else {
             this.holder = null;
         }
+
+        /* MODIFY START */
+        this.adaptiveThreadFactoryAssociationInformation = new AdaptiveThreadFactoryAssociationInformation();
+        /* MODIFY END */
     }
 
     /**
@@ -3064,4 +3072,43 @@ public class Thread implements Runnable {
 
     // The address of the next thread identifier, see ThreadIdentifiers.
     private static native long getNextThreadIdOffset();
+
+    /* MODIFY START */
+
+    private class AdaptiveThreadFactoryAssociationInformation {
+        private boolean isAssociatedWithAdaptiveThreadFactory;
+        private int adaptiveThreadFactoryId;
+        public AdaptiveThreadFactoryAssociationInformation() {
+            this.isAssociatedWithAdaptiveThreadFactory = false;
+        }
+        public AdaptiveThreadFactoryAssociationInformation(int adaptiveThreadFactoryId) {
+            this.isAssociatedWithAdaptiveThreadFactory = true;
+            this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+        }
+        public boolean isAssociatedWithAdaptiveThreadFactory() {
+            return this.isAssociatedWithAdaptiveThreadFactory;
+        }
+        public int getAdaptiveThreadFactoryId() {
+            if(!this.isAssociatedWithAdaptiveThreadFactory) {
+                throw new UnsupportedOperationException("The thread is not associated with an adaptive tread factory.");
+            }
+            return this.adaptiveThreadFactoryId;
+        }
+    }
+
+    private AdaptiveThreadFactoryAssociationInformation adaptiveThreadFactoryAssociationInformation;
+
+    void associateWithAdaptiveThreadFactory(int adaptiveThreadFactoryId) {
+        this.adaptiveThreadFactoryAssociationInformation = new AdaptiveThreadFactoryAssociationInformation(adaptiveThreadFactoryId);
+    }
+
+    boolean isAssociatedWithAdaptiveThreadFactory() {
+        return this.adaptiveThreadFactoryAssociationInformation.isAssociatedWithAdaptiveThreadFactory();
+    }
+
+    int getAdaptiveThreadFactoryId() throws UnsupportedOperationException {
+        return this.adaptiveThreadFactoryAssociationInformation.getAdaptiveThreadFactoryId();
+    }    
+
+    /* MODIFY END */
 }

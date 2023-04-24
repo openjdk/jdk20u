@@ -42,11 +42,14 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     public Thread newThread(Runnable originalTask) {
         final boolean response = queryMonitor(this.adaptiveThreadFactoryId);
         final Runnable augmentedTask = augmentTask(originalTask);
+        Thread newThread;
         if(response) {
-            return virtualThreadFactory.newThread(augmentedTask);
+            newThread = virtualThreadFactory.newThread(augmentedTask);
         } else {
-            return platformThreadFactory.newThread(augmentedTask);
+            newThread = platformThreadFactory.newThread(augmentedTask);
         }
+        newThread.associateWithAdaptiveThreadFactory(this.adaptiveThreadFactoryId);
+        return newThread;
     }
 
     /*
@@ -58,7 +61,10 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
     private Runnable augmentTask(Runnable originalTask) {
         final Runnable augmentedTask = () -> {
-            registerWithMonitor(this.adaptiveThreadFactoryId, Thread.currentThread().threadId());
+            registerWithMonitor(
+                Thread.currentThread().getAdaptiveThreadFactoryId(), 
+                Thread.currentThread().threadId()
+            );
             originalTask.run();
             // TO DO: deregister from monitor
         };
