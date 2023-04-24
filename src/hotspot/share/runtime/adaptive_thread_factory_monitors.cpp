@@ -31,7 +31,8 @@ void AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(int adaptive
 }
 
 bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
-    return false;
+    // TO DO: provide implementation
+    return true;
 }
 
 void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
