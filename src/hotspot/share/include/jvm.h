@@ -806,7 +806,7 @@ JNIEXPORT jboolean JNICALL
 JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
 
 JNIEXPORT void JNICALL
-JVM_RegisterWithMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
+JVM_RegisterWithMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
 
 /* END MODIFY */
 

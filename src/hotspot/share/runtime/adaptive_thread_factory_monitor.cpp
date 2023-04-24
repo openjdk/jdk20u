@@ -1,13 +1,25 @@
+#include "runtime/adaptive_thread_factory_utility.hpp"
 #include "runtime/adaptive_thread_factory_monitor.hpp"
 
 AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor() {}
 
 AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId) { 
     _adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+    long defaultJavaLevelThreadIdValue = -1;
+    _javaLevelThreadIds = new SimpleConcurrentLinkedList<long>(defaultJavaLevelThreadIdValue);
 }
 
-int AdaptiveThreadFactoryMonitor::getId() const {
+int AdaptiveThreadFactoryMonitor::getFactoryId() const {
     return _adaptiveThreadFactoryId;
+}
+
+const long& AdaptiveThreadFactoryMonitor::addJavaLevelThreadId(long javaLevelThreadId) {
+    _javaLevelThreadIds->append(javaLevelThreadId);
+    AdaptiveThreadFactoryUtility::checkRequirement(
+       javaLevelThreadId == _javaLevelThreadIds->get(javaLevelThreadId),
+       (char*)"AdaptiveThreadFactoryMonitor::addJavaLevelThreadId: The requested ID does not exist."
+    );
+    return _javaLevelThreadIds->get(javaLevelThreadId);
 }
 
 //AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitor::operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor) {

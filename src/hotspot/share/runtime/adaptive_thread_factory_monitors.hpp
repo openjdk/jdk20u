@@ -12,10 +12,11 @@ class AdaptiveThreadFactoryMonitors : AllStatic {
         static SimpleConcurrentHashMap<int, AdaptiveThreadFactoryMonitor>* _adaptiveThreadFactoryMonitors;
     public:
         static const pthread_key_t _monitorAccessKey;
+        static const pthread_key_t _javaLevelThreadIdAccessKey;
         static void initialiseAdaptiveThreadFactoryMonitors();
         static void addAdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
         static bool answerQuery(int adaptiveThreadFactoryId);
-        static void associateWithMonitor(int adaptiveThreadFactoryId);
+        static void associateWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);
 };
 
 #endif // SHARE_RUNTIME_ADAPTIVE_THREAD_FACTORY_MONITORS_HPP

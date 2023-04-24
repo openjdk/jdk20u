@@ -92,7 +92,7 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
             //fprintf(stderr, "put: %s\n", "after release");
         }
 
-        const V& get(const K& key) {
+        V& get(const K& key) {
             //fprintf(stderr, "get: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
             //fprintf(stderr, "get: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);
@@ -100,7 +100,7 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
                 if(current->key == key) {
-                    const V& result = current->value;
+                    V& result = current->value;
                     //fprintf(stderr, "get: %s\n", "before release");
                     pthread_mutex_unlock(&_lock);
                     //fprintf(stderr, "get: %s\n", "after release");

@@ -58,7 +58,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
     private Runnable augmentTask(Runnable originalTask) {
         final Runnable augmentedTask = () -> {
-            registerWithMonitor(this.adaptiveThreadFactoryId);
+            registerWithMonitor(this.adaptiveThreadFactoryId, Thread.currentThread().threadId());
             originalTask.run();
             // TO DO: deregister from monitor
         };
@@ -71,7 +71,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
     private native boolean queryMonitor(int adaptiveThreadFactoryId);
 
-    private native void registerWithMonitor(int adaptiveThreadFactoryId);
+    private native void registerWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);
 
 
 }

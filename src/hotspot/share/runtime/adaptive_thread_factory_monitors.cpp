@@ -11,11 +11,17 @@ const pthread_key_t AdaptiveThreadFactoryMonitors::_monitorAccessKey = []{
   return key;
 }();
 
+const pthread_key_t AdaptiveThreadFactoryMonitors::_javaLevelThreadIdAccessKey = []{
+  pthread_key_t key;
+  pthread_key_create(&key, NULL);
+  return key;
+}();
+
 void AdaptiveThreadFactoryMonitors::initialiseAdaptiveThreadFactoryMonitors() {
     // create map
     int numberBuckets = 32;
     int(*mapKeyToInteger)(int) = [](int key){ return key; };
-    AdaptiveThreadFactoryMonitor* defaultValue = new AdaptiveThreadFactoryMonitor(0);
+    AdaptiveThreadFactoryMonitor* defaultValue = new AdaptiveThreadFactoryMonitor(-1);
     _adaptiveThreadFactoryMonitors = new SimpleConcurrentHashMap<int, AdaptiveThreadFactoryMonitor>(numberBuckets, mapKeyToInteger, *defaultValue);
 }
 
@@ -28,13 +34,15 @@ bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
     return false;
 }
 
-void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFactoryId) {
-    const AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
+void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
     AdaptiveThreadFactoryUtility::checkRequirement(
-       associatedMonitor.getId() == adaptiveThreadFactoryId,
+       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
        (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
     );
     pthread_setspecific(_monitorAccessKey, &associatedMonitor);
+    const long& registeredJavaLevelThreadId = associatedMonitor.addJavaLevelThreadId(javaLevelThreadId);
+    pthread_setspecific(_javaLevelThreadIdAccessKey, &registeredJavaLevelThreadId);
 }
 
 void adaptive_thread_factory_monitors_initialisation() {

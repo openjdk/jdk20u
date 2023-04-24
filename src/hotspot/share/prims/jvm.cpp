@@ -727,8 +727,8 @@ JVM_ENTRY(jboolean, JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory,
   return (jboolean)AdaptiveThreadFactoryMonitors::answerQuery(adaptiveThreadFactoryId);
 JVM_END
 
-JVM_ENTRY(void, JVM_RegisterWithMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
-  AdaptiveThreadFactoryMonitors::associateWithMonitor(adaptiveThreadFactoryId);
+JVM_ENTRY(void, JVM_RegisterWithMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong javaLevelThreadId))
+  AdaptiveThreadFactoryMonitors::associateWithMonitor(adaptiveThreadFactoryId, javaLevelThreadId);
 JVM_END
 
 /* MODIFY END */
