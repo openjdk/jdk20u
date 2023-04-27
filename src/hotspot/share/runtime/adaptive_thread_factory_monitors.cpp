@@ -35,6 +35,28 @@ bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
     return true;
 }
 
+void AdaptiveThreadFactoryMonitors::registerWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
+    AdaptiveThreadFactoryUtility::checkRequirement(
+       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
+       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
+    );
+    pthread_setspecific(_monitorAccessKey, &associatedMonitor);
+    const long& registeredJavaLevelThreadId = associatedMonitor.addAndGetJavaLevelThreadId(javaLevelThreadId);
+    pthread_setspecific(_javaLevelThreadIdAccessKey, &registeredJavaLevelThreadId);
+}
+
+void AdaptiveThreadFactoryMonitors::deregisterFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
+    AdaptiveThreadFactoryUtility::checkRequirement(
+       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
+       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
+    );
+    associatedMonitor.removeJavaLevelThreadId(javaLevelThreadId);
+    pthread_setspecific(_monitorAccessKey, nullptr);
+    pthread_setspecific(_javaLevelThreadIdAccessKey, nullptr);
+}
+
 void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
     AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
     AdaptiveThreadFactoryUtility::checkRequirement(
@@ -42,7 +64,7 @@ void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFacto
        (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
     );
     pthread_setspecific(_monitorAccessKey, &associatedMonitor);
-    const long& registeredJavaLevelThreadId = associatedMonitor.addJavaLevelThreadId(javaLevelThreadId);
+    const long& registeredJavaLevelThreadId = associatedMonitor.getJavaLevelThreadId(javaLevelThreadId);
     pthread_setspecific(_javaLevelThreadIdAccessKey, &registeredJavaLevelThreadId);
 }
 
@@ -52,7 +74,6 @@ void AdaptiveThreadFactoryMonitors::disassociateFromMonitor(int adaptiveThreadFa
        associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
        (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
     );
-    associatedMonitor.removeJavaLevelThreadId(javaLevelThreadId);
     pthread_setspecific(_monitorAccessKey, nullptr);
     pthread_setspecific(_javaLevelThreadIdAccessKey, nullptr);
 }

@@ -61,12 +61,15 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
     private Runnable augmentTask(Runnable originalTask) {
         final Runnable augmentedTask = () -> {
-            associateOSThreadWithMonitor(
+            registerJavaThreadAndAssociateOSThreadWithMonitor(
                 Thread.currentThread().getAdaptiveThreadFactoryId(), 
                 Thread.currentThread().threadId()
             );
             originalTask.run();
-            // TO DO: deregister from monitor
+            deregisterJavaThreadAndDisassociateOSThreadFromMonitor(
+                Thread.currentThread().getAdaptiveThreadFactoryId(), 
+                Thread.currentThread().threadId() 
+            );
         };
         return augmentedTask;
     }
@@ -75,7 +78,9 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
     private native void addMonitor(int adaptiveThreadFactoryId);
     private native boolean queryMonitor(int adaptiveThreadFactoryId);
-    static native void associateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);
-    static native void disassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);
+    static native void registerJavaThreadAndAssociateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
+    static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
+    static native void associateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
+    static native void disassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
 
 }

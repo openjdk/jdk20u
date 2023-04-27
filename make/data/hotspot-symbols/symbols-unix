@@ -211,6 +211,8 @@ JVM_Yield
 #JVM_AdaptiveThreadFactoryTest
 JVM_AddMonitor
 JVM_QueryMonitor
+JVM_RegisterWithMonitor
+JVM_DeregisterFromMonitor
 JVM_AssociateWithMonitor
 JVM_DisassociateFromMonitor
 # MODIFY END

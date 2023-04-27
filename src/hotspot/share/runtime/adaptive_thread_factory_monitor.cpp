@@ -13,8 +13,16 @@ int AdaptiveThreadFactoryMonitor::getFactoryId() const {
     return _adaptiveThreadFactoryId;
 }
 
-const long& AdaptiveThreadFactoryMonitor::addJavaLevelThreadId(long javaLevelThreadId) {
+const long& AdaptiveThreadFactoryMonitor::addAndGetJavaLevelThreadId(long javaLevelThreadId) {
     _javaLevelThreadIds->append(javaLevelThreadId);
+    AdaptiveThreadFactoryUtility::checkRequirement(
+       javaLevelThreadId == _javaLevelThreadIds->get(javaLevelThreadId),
+       (char*)"AdaptiveThreadFactoryMonitor::addJavaLevelThreadId: The requested ID does not exist."
+    );
+    return _javaLevelThreadIds->get(javaLevelThreadId);
+}
+
+const long& AdaptiveThreadFactoryMonitor::getJavaLevelThreadId(long javaLevelThreadId) {
     AdaptiveThreadFactoryUtility::checkRequirement(
        javaLevelThreadId == _javaLevelThreadIds->get(javaLevelThreadId),
        (char*)"AdaptiveThreadFactoryMonitor::addJavaLevelThreadId: The requested ID does not exist."
