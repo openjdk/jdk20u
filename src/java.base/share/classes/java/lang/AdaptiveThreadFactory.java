@@ -13,18 +13,21 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private int adaptiveThreadFactoryId;
+    private long threadCreationTimeWindowLength;
     private ThreadFactory platformThreadFactory;
     private ThreadFactory virtualThreadFactory;
 
     /**
      * Comment 
      * 
-     * @param   adaptiveThreadFactoryId
-     *          Comment
+     * @param   adaptiveThreadFactoryId Comment
+     * @param   threadCreationTimeWindowLength Comment
      */
-    public AdaptiveThreadFactory(int adaptiveThreadFactoryId) {
+    public AdaptiveThreadFactory(int adaptiveThreadFactoryId, long threadCreationTimeWindowLength) {
         this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+        this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
         addMonitor(this.adaptiveThreadFactoryId);
+        setMonitorParameters(this.adaptiveThreadFactoryId, this.threadCreationTimeWindowLength);
         this.platformThreadFactory = Thread.ofPlatform().factory();
         this.virtualThreadFactory = Thread.ofVirtual().factory();
     }
@@ -77,6 +80,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     /* Native methods */
 
     private native void addMonitor(int adaptiveThreadFactoryId);
+    private native void setMonitorParameters(int adaptiveThreadFactoryId, long threadCreationTimeWindowLength);
     private native boolean queryMonitor(int adaptiveThreadFactoryId);
     static native void registerJavaThreadAndAssociateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
     static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads

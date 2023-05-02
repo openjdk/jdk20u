@@ -30,6 +30,15 @@ void AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(int adaptive
     _adaptiveThreadFactoryMonitors->put(adaptiveThreadFactoryId, *newAdaptiveThreadFactoryMonitor);
 }
 
+void AdaptiveThreadFactoryMonitors::setMonitorParameters(int adaptiveThreadFactoryId, long threadCreationTimeWindowLength) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
+    AdaptiveThreadFactoryUtility::checkRequirement(
+       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
+       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
+    );
+    associatedMonitor.setParameters(threadCreationTimeWindowLength);
+}
+
 bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
     // TO DO: provide implementation
     return true;

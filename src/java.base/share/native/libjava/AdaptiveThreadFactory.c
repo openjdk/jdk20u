@@ -8,6 +8,7 @@
 static JNINativeMethod methods[] = {
     //{"adaptiveThreadFactoryTest", "()I", (void *)&JVM_AdaptiveThreadFactoryTest},
     {"addMonitor", "(I)V", (void*)&JVM_AddMonitor},
+    {"setMonitorParameters", "(IJ)V", (void*)&JVM_SetMonitorParameters},
     {"queryMonitor", "(I)Z", (void*)&JVM_QueryMonitor},
     {"registerJavaThreadAndAssociateOSThreadWithMonitor", "(IJ)V", (void*)&JVM_RegisterWithMonitor},
     {"deregisterJavaThreadAndDisassociateOSThreadFromMonitor", "(IJ)V", (void*)&JVM_DeregisterFromMonitor},

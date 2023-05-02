@@ -210,6 +210,7 @@ JVM_Yield
 # MODIFY START
 #JVM_AdaptiveThreadFactoryTest
 JVM_AddMonitor
+JVM_SetMonitorParameters
 JVM_QueryMonitor
 JVM_RegisterWithMonitor
 JVM_DeregisterFromMonitor

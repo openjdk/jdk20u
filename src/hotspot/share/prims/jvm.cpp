@@ -723,6 +723,10 @@ JVM_ENTRY(void, JVM_AddMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint 
   AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(adaptiveThreadFactoryId);
 JVM_END
 
+JVM_ENTRY(void, JVM_SetMonitorParameters(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong threadCreationTimeWindowLength))
+  AdaptiveThreadFactoryMonitors::setMonitorParameters(adaptiveThreadFactoryId, threadCreationTimeWindowLength);
+JVM_END
+
 JVM_ENTRY(jboolean, JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
   return (jboolean)AdaptiveThreadFactoryMonitors::answerQuery(adaptiveThreadFactoryId);
 JVM_END

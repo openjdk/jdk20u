@@ -10,10 +10,12 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
     private:
         //std::atomic<int> _numberMonitoredThreads;
         int _adaptiveThreadFactoryId;
+        long _threadCreationTimeWindowLength;
         SimpleConcurrentLinkedList<long>* _javaLevelThreadIds;
     public:
         AdaptiveThreadFactoryMonitor();
         AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
+        void setParameters(long threadCreationTimeWindowLength);
         int getFactoryId() const;
         const long& addAndGetJavaLevelThreadId(long javaLevelThreadId);
         const long& getJavaLevelThreadId(long javaLevelThreadId);

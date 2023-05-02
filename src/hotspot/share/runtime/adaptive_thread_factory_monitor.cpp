@@ -9,6 +9,10 @@ AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFac
     _javaLevelThreadIds = new SimpleConcurrentLinkedList<long>(defaultJavaLevelThreadIdValue);
 }
 
+void AdaptiveThreadFactoryMonitor::setParameters(long threadCreationTimeWindowLength) {
+    _threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+}
+
 int AdaptiveThreadFactoryMonitor::getFactoryId() const {
     return _adaptiveThreadFactoryId;
 }
