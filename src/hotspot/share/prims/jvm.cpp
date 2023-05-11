@@ -715,10 +715,6 @@ JVM_END
 
 /* MODIFY START */
 
-//JVM_ENTRY(jint, JVM_AdaptiveThreadFactoryTest(JNIEnv *env, jclass adaptiveThreadFactoryClass))
-//  return (jint)AdaptiveThreadFactoryMonitor::getNumberOfMonitoredThreads();
-//JVM_END
-
 JVM_ENTRY(void, JVM_AddMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
   AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(adaptiveThreadFactoryId);
 JVM_END

@@ -1,12 +1,15 @@
 #include "runtime/adaptive_thread_factory_utility.hpp"
 #include "runtime/adaptive_thread_factory_monitor.hpp"
 
+#include <time.h>
+#include <math.h>
+
 AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor() {}
 
 AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId) { 
     _adaptiveThreadFactoryId = adaptiveThreadFactoryId;
-    long defaultJavaLevelThreadIdValue = -1;
-    _javaLevelThreadIds = new SimpleConcurrentLinkedList<long>(defaultJavaLevelThreadIdValue);
+    _javaLevelThreadIds = new SimpleConcurrentLinkedList<long>(-1);
+    _threadCreationTimes = new SimpleConcurrentLinkedList<long>(-1);
 }
 
 void AdaptiveThreadFactoryMonitor::setParameters(long threadCreationTimeWindowLength) {
@@ -38,35 +41,9 @@ void AdaptiveThreadFactoryMonitor::removeJavaLevelThreadId(long javaLevelThreadI
     _javaLevelThreadIds->remove(javaLevelThreadId);
 }
 
-//AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitor::operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor) {
-//    _adaptiveThreadFactoryId = adaptiveThreadFactoryMonitor._adaptiveThreadFactoryId;
-//    return *this;
-//}
-
-// AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor() {
-//     _numberMonitoredThreads.store(0);
-// }
-
-// AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitor::operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor) {
-//     this->_numberMonitoredThreads.store(adaptiveThreadFactoryMonitor._numberMonitoredThreads.load());
-//     return *this;
-// }
-
-// AdaptiveThreadFactoryMonitor AdaptiveThreadFactoryMonitor::_adaptive_thread_factory_monitor;
-
-// void AdaptiveThreadFactoryMonitor::initialiseAdaptiveThreadFactoryMonitor() {
-//     AdaptiveThreadFactoryMonitor adaptiveThreadFactoryMonitor;
-//     _adaptive_thread_factory_monitor = adaptiveThreadFactoryMonitor;
-// }
-
-// void adaptive_thread_factory_initialisation() {
-//     AdaptiveThreadFactoryMonitor::initialiseAdaptiveThreadFactoryMonitor();
-// }
-
-// void AdaptiveThreadFactoryMonitor::incrementNumberOfMonitoredThreads() {
-//     _adaptive_thread_factory_monitor._numberMonitoredThreads++;
-// }
-
-// int AdaptiveThreadFactoryMonitor::getNumberOfMonitoredThreads() {
-//     return _adaptive_thread_factory_monitor._numberMonitoredThreads.load();
-// }
+void AdaptiveThreadFactoryMonitor::recordThreadCreation() {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    long currentTimeInMilliseconds = 1000 * now.tv_sec + round((double)now.tv_nsec/1000000);
+    _threadCreationTimes->append(currentTimeInMilliseconds);
+}

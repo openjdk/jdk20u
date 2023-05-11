@@ -4,14 +4,12 @@
 #include "memory/allocation.hpp"
 #include "utilities/simple_concurrent_linked_list.hpp"
 
-//#include <atomic>
-
 class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
     private:
-        //std::atomic<int> _numberMonitoredThreads;
         int _adaptiveThreadFactoryId;
         long _threadCreationTimeWindowLength;
         SimpleConcurrentLinkedList<long>* _javaLevelThreadIds;
+        SimpleConcurrentLinkedList<long>* _threadCreationTimes;
     public:
         AdaptiveThreadFactoryMonitor();
         AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
@@ -20,12 +18,7 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
         const long& addAndGetJavaLevelThreadId(long javaLevelThreadId);
         const long& getJavaLevelThreadId(long javaLevelThreadId);
         void removeJavaLevelThreadId(long javaLevelThreadId);
-        //AdaptiveThreadFactoryMonitor();
-        //AdaptiveThreadFactoryMonitor& operator=(const AdaptiveThreadFactoryMonitor& adaptiveThreadFactoryMonitor);
-        //static AdaptiveThreadFactoryMonitor _adaptive_thread_factory_monitor;
-        //static void initialiseAdaptiveThreadFactoryMonitor();
-        //static void incrementNumberOfMonitoredThreads();
-        //static int getNumberOfMonitoredThreads();
+        void recordThreadCreation();
 };
 
 #endif // SHARE_RUNTIME_ADAPTIVE_THREAD_FACTORY_MONITOR_HPP

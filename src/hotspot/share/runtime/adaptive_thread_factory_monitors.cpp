@@ -46,6 +46,7 @@ bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
 
 void AdaptiveThreadFactoryMonitors::registerWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
     AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
+    associatedMonitor.recordThreadCreation();
     AdaptiveThreadFactoryUtility::checkRequirement(
        associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
        (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
