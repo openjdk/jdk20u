@@ -13,7 +13,8 @@ AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFac
     _parkingTimes = new SimpleConcurrentLinkedList<long>(-1);
 }
 
-void AdaptiveThreadFactoryMonitor::setParameters(long threadCreationTimeWindowLength) {
+void AdaptiveThreadFactoryMonitor::setParameters(long parkingTimeWindowLength, long threadCreationTimeWindowLength) {
+    _parkingTimeWindowLength = parkingTimeWindowLength;
     _threadCreationTimeWindowLength = threadCreationTimeWindowLength;
 }
 

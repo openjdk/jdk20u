@@ -7,6 +7,7 @@
 class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
     private:
         int _adaptiveThreadFactoryId;
+        long _parkingTimeWindowLength;
         long _threadCreationTimeWindowLength;
         SimpleConcurrentLinkedList<long>* _javaLevelThreadIds;
         SimpleConcurrentLinkedList<long>* _threadCreationTimes;
@@ -15,7 +16,7 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
     public:
         AdaptiveThreadFactoryMonitor();
         AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
-        void setParameters(long threadCreationTimeWindowLength);
+        void setParameters(long parkingTimeWindowLength, long threadCreationTimeWindowLength);
         int getFactoryId() const;
         const long& addAndGetJavaLevelThreadId(long javaLevelThreadId);
         const long& getJavaLevelThreadId(long javaLevelThreadId);

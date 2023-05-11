@@ -39,13 +39,13 @@ AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitors::getMonitor(int adap
     return associatedMonitor;
 }
 
-void AdaptiveThreadFactoryMonitors::setMonitorParameters(int adaptiveThreadFactoryId, long threadCreationTimeWindowLength) {
+void AdaptiveThreadFactoryMonitors::setMonitorParameters(int adaptiveThreadFactoryId, long parkingTimeWindowLength, long threadCreationTimeWindowLength) {
     AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
-    associatedMonitor.setParameters(threadCreationTimeWindowLength);
+    associatedMonitor.setParameters(parkingTimeWindowLength, threadCreationTimeWindowLength);
 }
 
 bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
-    // TO DO: provide implementation
+    // TO DO: provide implementation 
     return true;
 }
 

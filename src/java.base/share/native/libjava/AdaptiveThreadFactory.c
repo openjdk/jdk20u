@@ -7,7 +7,7 @@
 
 static JNINativeMethod methods[] = {
     {"addMonitor", "(I)V", (void*)&JVM_AddMonitor},
-    {"setMonitorParameters", "(IJ)V", (void*)&JVM_SetMonitorParameters},
+    {"setMonitorParameters", "(IJJ)V", (void*)&JVM_SetMonitorParameters},
     {"queryMonitor", "(I)Z", (void*)&JVM_QueryMonitor},
     {"registerJavaThreadAndAssociateOSThreadWithMonitor", "(IJ)V", (void*)&JVM_RegisterWithMonitor},
     {"deregisterJavaThreadAndDisassociateOSThreadFromMonitor", "(IJ)V", (void*)&JVM_DeregisterFromMonitor},

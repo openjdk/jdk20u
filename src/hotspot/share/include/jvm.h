@@ -800,7 +800,7 @@ JNIEXPORT void JNICALL
 JVM_AddMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
 
 JNIEXPORT void JNICALL
-JVM_SetMonitorParameters(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong threadCreationTimeWindowLength);
+JVM_SetMonitorParameters(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong parkingTimeWindowLength, jlong threadCreationTimeWindowLength);
 
 JNIEXPORT jboolean JNICALL
 JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
