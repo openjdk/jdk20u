@@ -806,16 +806,19 @@ JNIEXPORT jboolean JNICALL
 JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
 
 JNIEXPORT void JNICALL
-JVM_RegisterWithMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
+JVM_RegisterWithMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
 
 JNIEXPORT void JNICALL
-JVM_DeregisterFromMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
+JVM_DeregisterFromMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
 
 JNIEXPORT void JNICALL
-JVM_AssociateWithMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
+JVM_AssociateWithMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
 
 JNIEXPORT void JNICALL
-JVM_DisassociateFromMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
+JVM_DisassociateFromMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);
+
+JNIEXPORT void JNICALL
+JVM_RecordParking(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId);
 
 /* END MODIFY */
 

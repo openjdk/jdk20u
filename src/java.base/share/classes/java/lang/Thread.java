@@ -3102,11 +3102,19 @@ public class Thread implements Runnable {
         this.adaptiveThreadFactoryAssociationInformation = new AdaptiveThreadFactoryAssociationInformation(adaptiveThreadFactoryId);
     }
 
-    boolean isAssociatedWithAdaptiveThreadFactory() {
+    /**
+     * Comment
+     * @return Comment  
+     */
+    public boolean isAssociatedWithAdaptiveThreadFactory() {
         return this.adaptiveThreadFactoryAssociationInformation.isAssociatedWithAdaptiveThreadFactory();
     }
 
-    int getAdaptiveThreadFactoryId() throws UnsupportedOperationException {
+    /**
+     * Comment
+     * @return Comment  
+     */
+    public int getAdaptiveThreadFactoryId() throws UnsupportedOperationException {
         return this.adaptiveThreadFactoryAssociationInformation.getAdaptiveThreadFactoryId();
     }    
 

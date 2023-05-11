@@ -38,6 +38,10 @@ package java.util.concurrent.locks;
 import jdk.internal.misc.VirtualThreads;
 import jdk.internal.misc.Unsafe;
 
+/* MODIFY START */
+import java.lang.AdaptiveThreadFactory;
+/* MODIFY END */
+
 /**
  * Basic thread blocking primitives for creating locks and other
  * synchronization classes.
@@ -215,6 +219,13 @@ public class LockSupport {
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
         try {
+            /* MODIFY START */
+            if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
+                recordParking(
+                    Thread.currentThread().getAdaptiveThreadFactoryId()
+                );
+            }
+            /* MODIFY END */
             if (t.isVirtual()) {
                 VirtualThreads.park();
             } else {
@@ -263,6 +274,13 @@ public class LockSupport {
             Thread t = Thread.currentThread();
             setBlocker(t, blocker);
             try {
+                /* MODIFY START */
+                if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
+                    recordParking(
+                        Thread.currentThread().getAdaptiveThreadFactoryId()
+                    );
+                }
+                /* MODIFY END */
                 if (t.isVirtual()) {
                     VirtualThreads.park(nanos);
                 } else {
@@ -311,6 +329,13 @@ public class LockSupport {
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
         try {
+            /* MODIFY START */
+            if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
+                recordParking(
+                    Thread.currentThread().getAdaptiveThreadFactoryId()
+                );
+            }
+            /* MODIFY END */
             if (t.isVirtual()) {
                 VirtualThreads.parkUntil(deadline);
             } else {
@@ -365,6 +390,13 @@ public class LockSupport {
      * for example, the interrupt status of the thread upon return.
      */
     public static void park() {
+        /* MODIFY START */
+        if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
+            recordParking(
+                Thread.currentThread().getAdaptiveThreadFactoryId()
+            );
+        }
+        /* MODIFY END */
         if (Thread.currentThread().isVirtual()) {
             VirtualThreads.park();
         } else {
@@ -404,6 +436,13 @@ public class LockSupport {
      */
     public static void parkNanos(long nanos) {
         if (nanos > 0) {
+            /* MODIFY START */
+            if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
+                recordParking(
+                    Thread.currentThread().getAdaptiveThreadFactoryId()
+                );
+            }
+            /* MODIFY END */
             if (Thread.currentThread().isVirtual()) {
                 VirtualThreads.park(nanos);
             } else {
@@ -443,6 +482,13 @@ public class LockSupport {
      *        to wait until
      */
     public static void parkUntil(long deadline) {
+        /* MODIFY START */
+        if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
+            recordParking(
+                Thread.currentThread().getAdaptiveThreadFactoryId()
+            );
+        }
+        /* MODIFY END */
         if (Thread.currentThread().isVirtual()) {
             VirtualThreads.parkUntil(deadline);
         } else {
@@ -461,5 +507,16 @@ public class LockSupport {
     private static final Unsafe U = Unsafe.getUnsafe();
     private static final long PARKBLOCKER
         = U.objectFieldOffset(Thread.class, "parkBlocker");
+
+    /* MODIFY START */
+
+    private static native void registerNatives();
+    static {
+        registerNatives();
+    }
+
+    private static native void recordParking(int adaptiveThreadFactoryId);
+
+    /* MODIFY END */
 
 }

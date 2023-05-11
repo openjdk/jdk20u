@@ -30,12 +30,17 @@ void AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(int adaptive
     _adaptiveThreadFactoryMonitors->put(adaptiveThreadFactoryId, *newAdaptiveThreadFactoryMonitor);
 }
 
-void AdaptiveThreadFactoryMonitors::setMonitorParameters(int adaptiveThreadFactoryId, long threadCreationTimeWindowLength) {
+AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitors::getMonitor(int adaptiveThreadFactoryId) {
     AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
     AdaptiveThreadFactoryUtility::checkRequirement(
        associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
        (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
     );
+    return associatedMonitor;
+}
+
+void AdaptiveThreadFactoryMonitors::setMonitorParameters(int adaptiveThreadFactoryId, long threadCreationTimeWindowLength) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
     associatedMonitor.setParameters(threadCreationTimeWindowLength);
 }
 
@@ -45,47 +50,35 @@ bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
 }
 
 void AdaptiveThreadFactoryMonitors::registerWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
-    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
-    associatedMonitor.recordThreadCreation();
-    AdaptiveThreadFactoryUtility::checkRequirement(
-       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
-       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
-    );
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
     pthread_setspecific(_monitorAccessKey, &associatedMonitor);
     const long& registeredJavaLevelThreadId = associatedMonitor.addAndGetJavaLevelThreadId(javaLevelThreadId);
     pthread_setspecific(_javaLevelThreadIdAccessKey, &registeredJavaLevelThreadId);
 }
 
 void AdaptiveThreadFactoryMonitors::deregisterFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
-    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
-    AdaptiveThreadFactoryUtility::checkRequirement(
-       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
-       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
-    );
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
     associatedMonitor.removeJavaLevelThreadId(javaLevelThreadId);
     pthread_setspecific(_monitorAccessKey, nullptr);
     pthread_setspecific(_javaLevelThreadIdAccessKey, nullptr);
 }
 
 void AdaptiveThreadFactoryMonitors::associateWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
-    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
-    AdaptiveThreadFactoryUtility::checkRequirement(
-       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
-       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
-    );
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
     pthread_setspecific(_monitorAccessKey, &associatedMonitor);
     const long& registeredJavaLevelThreadId = associatedMonitor.getJavaLevelThreadId(javaLevelThreadId);
     pthread_setspecific(_javaLevelThreadIdAccessKey, &registeredJavaLevelThreadId);
 }
 
 void AdaptiveThreadFactoryMonitors::disassociateFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
-    AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
-    AdaptiveThreadFactoryUtility::checkRequirement(
-       associatedMonitor.getFactoryId() == adaptiveThreadFactoryId,
-       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
-    );
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
     pthread_setspecific(_monitorAccessKey, nullptr);
     pthread_setspecific(_javaLevelThreadIdAccessKey, nullptr);
+}
+
+void AdaptiveThreadFactoryMonitors::recordParking(int adaptiveThreadFactoryId) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
+    associatedMonitor.recordParking();
 }
 
 void adaptive_thread_factory_monitors_initialisation() {

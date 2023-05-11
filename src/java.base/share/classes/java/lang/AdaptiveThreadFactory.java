@@ -33,12 +33,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     /**
-    * Comment
-    * @return Comment
-    */
-    //public static native int adaptiveThreadFactoryTest();
-
-    /**
      * Comment
      * @return Comment
      */
@@ -86,5 +80,4 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
     static native void associateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
     static native void disassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
-
 }

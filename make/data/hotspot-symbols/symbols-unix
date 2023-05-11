@@ -208,7 +208,6 @@ JVM_UnloadLibrary
 JVM_WaitForReferencePendingList
 JVM_Yield
 # MODIFY START
-#JVM_AdaptiveThreadFactoryTest
 JVM_AddMonitor
 JVM_SetMonitorParameters
 JVM_QueryMonitor
@@ -216,6 +215,7 @@ JVM_RegisterWithMonitor
 JVM_DeregisterFromMonitor
 JVM_AssociateWithMonitor
 JVM_DisassociateFromMonitor
+JVM_RecordParking
 # MODIFY END
 
 # Module related API's

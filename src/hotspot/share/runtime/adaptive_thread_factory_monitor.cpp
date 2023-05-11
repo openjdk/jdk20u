@@ -10,6 +10,7 @@ AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFac
     _adaptiveThreadFactoryId = adaptiveThreadFactoryId;
     _javaLevelThreadIds = new SimpleConcurrentLinkedList<long>(-1);
     _threadCreationTimes = new SimpleConcurrentLinkedList<long>(-1);
+    _parkingTimes = new SimpleConcurrentLinkedList<long>(-1);
 }
 
 void AdaptiveThreadFactoryMonitor::setParameters(long threadCreationTimeWindowLength) {
@@ -41,9 +42,18 @@ void AdaptiveThreadFactoryMonitor::removeJavaLevelThreadId(long javaLevelThreadI
     _javaLevelThreadIds->remove(javaLevelThreadId);
 }
 
-void AdaptiveThreadFactoryMonitor::recordThreadCreation() {
+long AdaptiveThreadFactoryMonitor::getCurrentTimeInMilliseconds() {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
     long currentTimeInMilliseconds = 1000 * now.tv_sec + round((double)now.tv_nsec/1000000);
+    return currentTimeInMilliseconds;
+}
+
+void AdaptiveThreadFactoryMonitor::recordThreadCreation() {
+    long currentTimeInMilliseconds = getCurrentTimeInMilliseconds();
     _threadCreationTimes->append(currentTimeInMilliseconds);
+}
+void AdaptiveThreadFactoryMonitor::recordParking() {
+    long currentTimeInMilliseconds = getCurrentTimeInMilliseconds();
+    _parkingTimes->append(currentTimeInMilliseconds);
 }
