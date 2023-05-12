@@ -29,6 +29,12 @@ void AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(int adaptive
     _adaptiveThreadFactoryMonitors->put(adaptiveThreadFactoryId, *newAdaptiveThreadFactoryMonitor);
 }
 
+void AdaptiveThreadFactoryMonitors::removeAdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
+    associatedMonitor.close();
+    _adaptiveThreadFactoryMonitors->remove(adaptiveThreadFactoryId);
+}
+
 AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitors::getMonitor(int adaptiveThreadFactoryId) {
     AdaptiveThreadFactoryMonitor& associatedMonitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
     AdaptiveThreadFactoryUtility::checkRequirement(

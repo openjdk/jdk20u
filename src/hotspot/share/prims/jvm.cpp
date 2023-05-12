@@ -719,6 +719,10 @@ JVM_ENTRY(void, JVM_AddMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint 
   AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(adaptiveThreadFactoryId);
 JVM_END
 
+JVM_ENTRY(void, JVM_RemoveMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
+  AdaptiveThreadFactoryMonitors::removeAdaptiveThreadFactoryMonitor(adaptiveThreadFactoryId);
+JVM_END
+
 JVM_ENTRY(void, JVM_SetMonitorParameters(
   JNIEnv *env, 
   jobject adaptiveThreadFactory, 

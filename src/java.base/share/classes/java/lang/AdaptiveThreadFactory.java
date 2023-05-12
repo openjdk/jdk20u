@@ -96,7 +96,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * Comment
      */
     public void close() {
-        // TO DO: remove monitor
+        removeMonitor(this.adaptiveThreadFactoryId);
     }
 
     private Runnable augmentTask(Runnable originalTask) {
@@ -117,6 +117,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     /* Native methods */
 
     private native void addMonitor(int adaptiveThreadFactoryId);
+    private native void removeMonitor(int adaptiveThreadFactoryId);
     private native void setMonitorParameters(
         int adaptiveThreadFactoryId, 
         long parkingTimeWindowLength, 

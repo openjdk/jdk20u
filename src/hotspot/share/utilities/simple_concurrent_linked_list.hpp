@@ -111,6 +111,18 @@ public:
         pthread_mutex_unlock(&_lock);
         return counter;
     }
+
+    void clear() {
+        pthread_mutex_lock(&_lock);
+        SimpleConcurrentLinkedListNode<V>* current = _head;
+        while(current != nullptr) {
+            SimpleConcurrentLinkedListNode<V>* temporary = current;
+            current = current->_next;
+            delete temporary;
+        }
+        _head = nullptr;
+        pthread_mutex_unlock(&_lock);
+    }
     
 };
 

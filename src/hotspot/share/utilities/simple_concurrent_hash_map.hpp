@@ -45,7 +45,7 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
             for(int i = 0; i < _numberBuckets; i += 1) {
                 SimpleConcurrentHashMapEntry<K, V>* current = _buckets[i];
                 while (current != nullptr) {
-                    SimpleConcurrentHashMapEntry<K, V>* next = current->next;
+                    SimpleConcurrentHashMapEntry<K, V>* next = current->_next;
                     delete current;
                     current = next;
                 }
@@ -61,17 +61,17 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
             int bucketIndex = hash(key);
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
-                if(current->key == key) {
-                    current->value = value;
+                if(current->_key == key) {
+                    current->_value = value;
                     pthread_mutex_unlock(&_lock);
                     return;
                 }
-                current = current->next;
+                current = current->_next;
             }
             SimpleConcurrentHashMapEntry<K, V>* newEntry = new SimpleConcurrentHashMapEntry<K, V>();
-            newEntry->key = key;
-            newEntry->value = value;
-            newEntry->next = _buckets[bucketIndex];
+            newEntry->_key = key;
+            newEntry->_value = value;
+            newEntry->_next = _buckets[bucketIndex];
             _buckets[bucketIndex] = newEntry;
             pthread_mutex_unlock(&_lock);
         }
@@ -81,17 +81,39 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
             int bucketIndex = hash(key);
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
-                if(current->key == key) {
-                    V& result = current->value;
+                if(current->_key == key) {
+                    V& result = current->_value;
                     pthread_mutex_unlock(&_lock);
                     return result;
                 }
-                current = current->next;
+                current = current->_next;
             }
             pthread_mutex_unlock(&_lock);
             fprintf(stderr, "%s\n", "SimpleConcurrentHashMap.get: The requested element is not contained in the map.");
             exit(1);
         }
+
+        void remove(const K& key) {
+            pthread_mutex_lock(&_lock);
+            int bucketIndex = hash(key);
+            SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
+            SimpleConcurrentHashMapEntry<K, V>* predecessor = nullptr;
+            while(current != nullptr) {
+                if(current->_key == key) {
+                    if(predecessor == nullptr) {
+                        _buckets[bucketIndex] = current->_next;
+                    } else {
+                        predecessor->_next = current->_next;
+                    }   
+                    delete current;
+                    pthread_mutex_unlock(&_lock);
+                    return;
+                }
+                current = current->_next;
+            }
+            pthread_mutex_unlock(&_lock);
+        }
+
 };
 
 #endif // SHARE_UTILITIES_SIMPLE_CONCURRENT_HASH_MAP_HPP

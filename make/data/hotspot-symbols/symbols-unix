@@ -209,6 +209,7 @@ JVM_WaitForReferencePendingList
 JVM_Yield
 # MODIFY START
 JVM_AddMonitor
+JVM_RemoveMonitor
 JVM_SetMonitorParameters
 JVM_QueryMonitor
 JVM_RegisterWithMonitor

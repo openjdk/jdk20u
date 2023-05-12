@@ -25,6 +25,15 @@ void AdaptiveThreadFactoryMonitor::setParameters(
     _numberThreadCreationsThreshold = numberThreadCreationsThreshold;
 }
 
+void AdaptiveThreadFactoryMonitor::close() {
+    _javaLevelThreadIds->clear();
+    _threadCreationTimes->clear();
+    _parkingTimes->clear();
+    delete _javaLevelThreadIds;
+    delete _threadCreationTimes;
+    delete _parkingTimes;
+}
+
 int AdaptiveThreadFactoryMonitor::getFactoryId() const {
     return _adaptiveThreadFactoryId;
 }

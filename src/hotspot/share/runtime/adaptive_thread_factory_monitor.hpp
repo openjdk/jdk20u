@@ -25,6 +25,7 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
             long numberParkingsThreshold,
             long numberThreadCreationsThreshold
         );
+        void close();
         int getFactoryId() const;
         const long& addAndGetJavaLevelThreadId(long javaLevelThreadId);
         const long& getJavaLevelThreadId(long javaLevelThreadId);

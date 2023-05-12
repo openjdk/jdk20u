@@ -6,9 +6,9 @@
 template <typename K, typename V>
 class SimpleConcurrentHashMapEntry : public CHeapObj<mtInternal> {
     public:
-        K key;
-        V value;
-        SimpleConcurrentHashMapEntry* next;
+        K _key;
+        V _value;
+        SimpleConcurrentHashMapEntry* _next;
         SimpleConcurrentHashMapEntry() {}
 };
 

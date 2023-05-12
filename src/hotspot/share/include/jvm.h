@@ -800,6 +800,9 @@ JNIEXPORT void JNICALL
 JVM_AddMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
 
 JNIEXPORT void JNICALL
+JVM_RemoveMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
+
+JNIEXPORT void JNICALL
 JVM_SetMonitorParameters(
     JNIEnv *env, 
     jobject adaptiveThreadFactory, 

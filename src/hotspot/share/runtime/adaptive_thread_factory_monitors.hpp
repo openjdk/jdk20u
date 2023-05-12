@@ -16,6 +16,7 @@ class AdaptiveThreadFactoryMonitors : AllStatic {
         static const pthread_key_t _javaLevelThreadIdAccessKey;
         static void initialiseAdaptiveThreadFactoryMonitors();
         static void addAdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
+        static void removeAdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
         static void setMonitorParameters(
             int adaptiveThreadFactoryId, 
             long parkingTimeWindowLength, 
