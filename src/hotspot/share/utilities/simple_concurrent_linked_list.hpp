@@ -13,15 +13,13 @@ public:
 
     pthread_mutex_t _lock;
     SimpleConcurrentLinkedListNode<V>* _head;
-    V _defaultValue;
 
-    SimpleConcurrentLinkedList(const V& defaultValue) {
+    SimpleConcurrentLinkedList() {
         if(pthread_mutex_init(&_lock, NULL) != 0) {                                                                                           
             exit(1);                                                                    
         }
         pthread_mutex_lock(&_lock);  
         _head = nullptr;
-        _defaultValue = defaultValue;
         pthread_mutex_unlock(&_lock);
     }
 
@@ -89,7 +87,8 @@ public:
             current = current->_next;
         }
         pthread_mutex_unlock(&_lock);
-        return _defaultValue;
+        fprintf(stderr, "%s\n", "SimpleConcurrentLinkedList.get: The requested element is not contained in the list.");
+        exit(1);
     } 
 
     long countRecentValuesAndRemoveOldValues(const V& lowerBound) {
@@ -112,19 +111,7 @@ public:
         pthread_mutex_unlock(&_lock);
         return counter;
     }
-
-    /*
-    bool V& exists(const V& value) {
-        SimpleConcurrentLinkedListNode<V>* current = _head;
-        while(current != nullptr) {
-            if (current->_value == value) {
-                return true;
-            }
-            current = current->_next;
-        }
-        return false;
-    }
-    */
+    
 };
 
 #endif // SHARE_UTILITIES_SIMPLE_CONCURRENT_LINKED_LIST_HPP

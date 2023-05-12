@@ -8,9 +8,9 @@ AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor() {}
 
 AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId) { 
     _adaptiveThreadFactoryId = adaptiveThreadFactoryId;
-    _javaLevelThreadIds = new SimpleConcurrentLinkedList<long>(-1);
-    _threadCreationTimes = new SimpleConcurrentLinkedList<long>(-1);
-    _parkingTimes = new SimpleConcurrentLinkedList<long>(-1);
+    _javaLevelThreadIds = new SimpleConcurrentLinkedList<long>();
+    _threadCreationTimes = new SimpleConcurrentLinkedList<long>();
+    _parkingTimes = new SimpleConcurrentLinkedList<long>();
 }
 
 void AdaptiveThreadFactoryMonitor::setParameters(

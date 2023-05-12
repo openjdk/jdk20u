@@ -21,8 +21,7 @@ void AdaptiveThreadFactoryMonitors::initialiseAdaptiveThreadFactoryMonitors() {
     // create map
     int numberBuckets = 32;
     int(*mapKeyToInteger)(int) = [](int key){ return key; };
-    AdaptiveThreadFactoryMonitor* defaultValue = new AdaptiveThreadFactoryMonitor(-1);
-    _adaptiveThreadFactoryMonitors = new SimpleConcurrentHashMap<int, AdaptiveThreadFactoryMonitor>(numberBuckets, mapKeyToInteger, *defaultValue);
+    _adaptiveThreadFactoryMonitors = new SimpleConcurrentHashMap<int, AdaptiveThreadFactoryMonitor>(numberBuckets, mapKeyToInteger);
 }
 
 void AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId) {

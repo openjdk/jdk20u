@@ -18,7 +18,6 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
 
         pthread_mutex_t _lock;
         int _numberBuckets;
-        V _defaultValue;
         SimpleConcurrentHashMapEntry<K, V>** _buckets;
         int(*_mapKeyToInteger)(K);
         int hash(const K& key) {
@@ -27,28 +26,21 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
         
     public:
 
-        SimpleConcurrentHashMap(int numberBuckets, int(*mapKeyToInteger)(K), const V& defaultValue) {
-            //fprintf(stderr, "constructor: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
+        SimpleConcurrentHashMap(int numberBuckets, int(*mapKeyToInteger)(K)) {
             if(pthread_mutex_init(&_lock, NULL) != 0) {                                                                                           
                 exit(1);                                                                    
             }  
-            //fprintf(stderr, "constructor: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);   
             _numberBuckets = numberBuckets;
             _mapKeyToInteger = mapKeyToInteger;
-            _defaultValue = defaultValue;
             _buckets = (SimpleConcurrentHashMapEntry<K, V>**)malloc(_numberBuckets * sizeof(SimpleConcurrentHashMapEntry<K, V>*));
             for(int i = 0; i < _numberBuckets; i += 1) {
                 _buckets[i] = nullptr;
             }
-            //fprintf(stderr, "constructor: %s\n", "before release");
             pthread_mutex_unlock(&_lock);
-            //fprintf(stderr, "constructor: %s\n", "after release");
         }
 
         ~SimpleConcurrentHashMap() {
-            //fprintf(stderr, "destructor: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
-            //fprintf(stderr, "destructor: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);
             for(int i = 0; i < _numberBuckets; i += 1) {
                 SimpleConcurrentHashMapEntry<K, V>* current = _buckets[i];
@@ -60,24 +52,18 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
                 _buckets[i] = nullptr;
             }
             delete _buckets;
-            //fprintf(stderr, "destructor: %s\n", "before release");
             pthread_mutex_unlock(&_lock);
-            //fprintf(stderr, "destructor: %s\n", "after release");
             pthread_mutex_destroy(&_lock);
         }
 
         void put(const K& key, const V& value) {
-            //fprintf(stderr, "put: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
-            //fprintf(stderr, "put: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);
             int bucketIndex = hash(key);
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
                 if(current->key == key) {
                     current->value = value;
-                    //fprintf(stderr, "put: %s\n", "before release");
                     pthread_mutex_unlock(&_lock);
-                    //fprintf(stderr, "put: %s\n", "after release");
                     return;
                 }
                 current = current->next;
@@ -87,31 +73,24 @@ class SimpleConcurrentHashMap : public CHeapObj<mtInternal> {
             newEntry->value = value;
             newEntry->next = _buckets[bucketIndex];
             _buckets[bucketIndex] = newEntry;
-            //fprintf(stderr, "put: %s\n", "before release");
             pthread_mutex_unlock(&_lock);
-            //fprintf(stderr, "put: %s\n", "after release");
         }
 
         V& get(const K& key) {
-            //fprintf(stderr, "get: thread: %lu\n", (unsigned long)syscall(__NR_gettid));
-            //fprintf(stderr, "get: %s\n", "before acquisition");
             pthread_mutex_lock(&_lock);
             int bucketIndex = hash(key);
             SimpleConcurrentHashMapEntry<K, V>* current = _buckets[bucketIndex];
             while(current != nullptr) {
                 if(current->key == key) {
                     V& result = current->value;
-                    //fprintf(stderr, "get: %s\n", "before release");
                     pthread_mutex_unlock(&_lock);
-                    //fprintf(stderr, "get: %s\n", "after release");
                     return result;
                 }
                 current = current->next;
             }
-            //fprintf(stderr, "get: %s\n", "before release");
             pthread_mutex_unlock(&_lock);
-            //fprintf(stderr, "get: %s\n", "after release");
-            return _defaultValue;
+            fprintf(stderr, "%s\n", "SimpleConcurrentHashMap.get: The requested element is not contained in the map.");
+            exit(1);
         }
 };
 
