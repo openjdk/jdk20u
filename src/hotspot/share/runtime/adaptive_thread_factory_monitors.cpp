@@ -39,18 +39,31 @@ AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitors::getMonitor(int adap
     return associatedMonitor;
 }
 
-void AdaptiveThreadFactoryMonitors::setMonitorParameters(int adaptiveThreadFactoryId, long parkingTimeWindowLength, long threadCreationTimeWindowLength) {
+void AdaptiveThreadFactoryMonitors::setMonitorParameters(
+    int adaptiveThreadFactoryId, 
+    long parkingTimeWindowLength, 
+    long threadCreationTimeWindowLength, 
+    long numberParkingsThreshold,
+    long numberThreadCreationsThreshold
+) {
     AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
-    associatedMonitor.setParameters(parkingTimeWindowLength, threadCreationTimeWindowLength);
+    associatedMonitor.setParameters(
+        parkingTimeWindowLength, 
+        threadCreationTimeWindowLength,
+        numberParkingsThreshold,
+        numberThreadCreationsThreshold
+    );
 }
 
 bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
-    // TO DO: provide implementation 
-    return true;
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
+    bool decision = associatedMonitor.shallCreateVirtualThread();
+    return decision;
 }
 
 void AdaptiveThreadFactoryMonitors::registerWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
     AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
+    associatedMonitor.recordThreadCreation();
     pthread_setspecific(_monitorAccessKey, &associatedMonitor);
     const long& registeredJavaLevelThreadId = associatedMonitor.addAndGetJavaLevelThreadId(javaLevelThreadId);
     pthread_setspecific(_javaLevelThreadIdAccessKey, &registeredJavaLevelThreadId);

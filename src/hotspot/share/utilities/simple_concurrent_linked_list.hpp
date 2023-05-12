@@ -92,6 +92,27 @@ public:
         return _defaultValue;
     } 
 
+    long countRecentValuesAndRemoveOldValues(const V& lowerBound) {
+        pthread_mutex_lock(&_lock);
+        long counter = 0;
+        SimpleConcurrentLinkedListNode<V>* current = _head;
+        if(current == nullptr) {
+            pthread_mutex_unlock(&_lock);
+            return 0;
+        } 
+        while(current != nullptr) {
+            if(current->_value < lowerBound) {
+                SimpleConcurrentLinkedListNode<V>* temporary = current;
+                delete temporary;
+            } else {
+                counter += 1;
+            }
+            current = current->_next;
+        }
+        pthread_mutex_unlock(&_lock);
+        return counter;
+    }
+
     /*
     bool V& exists(const V& value) {
         SimpleConcurrentLinkedListNode<V>* current = _head;

@@ -13,9 +13,16 @@ AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFac
     _parkingTimes = new SimpleConcurrentLinkedList<long>(-1);
 }
 
-void AdaptiveThreadFactoryMonitor::setParameters(long parkingTimeWindowLength, long threadCreationTimeWindowLength) {
+void AdaptiveThreadFactoryMonitor::setParameters(
+    long parkingTimeWindowLength, 
+    long threadCreationTimeWindowLength,
+    long numberParkingsThreshold,
+    long numberThreadCreationsThreshold
+) {
     _parkingTimeWindowLength = parkingTimeWindowLength;
     _threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+    _numberParkingsThreshold = numberParkingsThreshold;
+    _numberThreadCreationsThreshold = numberThreadCreationsThreshold;
 }
 
 int AdaptiveThreadFactoryMonitor::getFactoryId() const {
@@ -57,4 +64,16 @@ void AdaptiveThreadFactoryMonitor::recordThreadCreation() {
 void AdaptiveThreadFactoryMonitor::recordParking() {
     long currentTimeInMilliseconds = getCurrentTimeInMilliseconds();
     _parkingTimes->append(currentTimeInMilliseconds);
+}
+
+long AdaptiveThreadFactoryMonitor::countNumberEventsInTimeWindow(SimpleConcurrentLinkedList<long>* events, long timeWindowLength) {
+    long timeLowerBound = getCurrentTimeInMilliseconds() - timeWindowLength;
+    long counter = events->countRecentValuesAndRemoveOldValues(timeLowerBound);
+    return counter;
+}
+
+bool AdaptiveThreadFactoryMonitor::shallCreateVirtualThread() {
+    long numberParkingsInTimeWindow = countNumberEventsInTimeWindow(_parkingTimes, _parkingTimeWindowLength);
+    long numberThreadCreationsInTimeWindow = countNumberEventsInTimeWindow(_threadCreationTimes, _threadCreationTimeWindowLength);
+    return true;
 }

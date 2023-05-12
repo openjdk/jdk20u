@@ -719,8 +719,22 @@ JVM_ENTRY(void, JVM_AddMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint 
   AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(adaptiveThreadFactoryId);
 JVM_END
 
-JVM_ENTRY(void, JVM_SetMonitorParameters(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId, jlong parkingTimeWindowLength, jlong threadCreationTimeWindowLength))
-  AdaptiveThreadFactoryMonitors::setMonitorParameters(adaptiveThreadFactoryId, parkingTimeWindowLength, threadCreationTimeWindowLength);
+JVM_ENTRY(void, JVM_SetMonitorParameters(
+  JNIEnv *env, 
+  jobject adaptiveThreadFactory, 
+  jint adaptiveThreadFactoryId, 
+  jlong parkingTimeWindowLength, 
+  jlong threadCreationTimeWindowLength,
+  jlong numberParkingsThreshold,
+  jlong numberThreadCreationsThreshold
+))
+  AdaptiveThreadFactoryMonitors::setMonitorParameters(
+    adaptiveThreadFactoryId, 
+    parkingTimeWindowLength, 
+    threadCreationTimeWindowLength,
+    numberParkingsThreshold,
+    numberThreadCreationsThreshold
+  );
 JVM_END
 
 JVM_ENTRY(jboolean, JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))

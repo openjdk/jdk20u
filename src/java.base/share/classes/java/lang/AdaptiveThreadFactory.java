@@ -15,6 +15,8 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     private int adaptiveThreadFactoryId;
     private long parkingTimeWindowLength;
     private long threadCreationTimeWindowLength;
+    private long numberParkingsThreshold;
+    private long numberThreadCreationsThreshold;
     private ThreadFactory platformThreadFactory;
     private ThreadFactory virtualThreadFactory;
 
@@ -24,15 +26,53 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * @param   adaptiveThreadFactoryId Comment
      * @param   parkingTimeWindowLength Comment
      * @param   threadCreationTimeWindowLength Comment
+     * @param   numberParkingsThreshold Comment
+     * @param   numberThreadCreationsThreshold Comment
      */
-    public AdaptiveThreadFactory(int adaptiveThreadFactoryId, long parkingTimeWindowLength, long threadCreationTimeWindowLength) {
+    public AdaptiveThreadFactory(
+        int adaptiveThreadFactoryId, 
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength,
+        long numberParkingsThreshold,
+        long numberThreadCreationsThreshold
+    ) {
         this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
-        this.parkingTimeWindowLength = parkingTimeWindowLength;
-        this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
         addMonitor(this.adaptiveThreadFactoryId);
-        setMonitorParameters(this.adaptiveThreadFactoryId, this.parkingTimeWindowLength, this.threadCreationTimeWindowLength);
+        setParameters(
+            parkingTimeWindowLength,
+            threadCreationTimeWindowLength,
+            numberParkingsThreshold,
+            numberThreadCreationsThreshold
+        );
         this.platformThreadFactory = Thread.ofPlatform().factory();
         this.virtualThreadFactory = Thread.ofVirtual().factory();
+    }
+
+    /**
+     * Comment 
+     * 
+     * @param   parkingTimeWindowLength Comment
+     * @param   threadCreationTimeWindowLength Comment
+     * @param   numberParkingsThreshold Comment
+     * @param   numberThreadCreationsThreshold Comment
+     */
+    public void setParameters(
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength,
+        long numberParkingsThreshold,
+        long numberThreadCreationsThreshold
+    ) {
+        this.parkingTimeWindowLength = parkingTimeWindowLength;
+        this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+        this.numberParkingsThreshold = numberParkingsThreshold;
+        this.numberThreadCreationsThreshold = numberThreadCreationsThreshold;
+        setMonitorParameters(
+            this.adaptiveThreadFactoryId, 
+            this.parkingTimeWindowLength, 
+            this.threadCreationTimeWindowLength,
+            this.numberParkingsThreshold,
+            this.numberThreadCreationsThreshold
+        );
     }
 
     /**
@@ -77,7 +117,13 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     /* Native methods */
 
     private native void addMonitor(int adaptiveThreadFactoryId);
-    private native void setMonitorParameters(int adaptiveThreadFactoryId, long parkingTimeWindowLength, long threadCreationTimeWindowLength);
+    private native void setMonitorParameters(
+        int adaptiveThreadFactoryId, 
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength,
+        long numberParkingsThreshold,
+        long numberThreadCreationsThreshold
+    );
     private native boolean queryMonitor(int adaptiveThreadFactoryId);
     static native void registerJavaThreadAndAssociateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
     static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
