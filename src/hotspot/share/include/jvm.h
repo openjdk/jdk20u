@@ -831,6 +831,12 @@ JVM_DisassociateFromMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint
 JNIEXPORT void JNICALL
 JVM_RecordParking(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId);
 
+JNIEXPORT jlong JNICALL
+JVM_CountParkings(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId);
+
+JNIEXPORT jlong JNICALL
+JVM_CountThreadCreations(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId);
+
 /* END MODIFY */
 
 /*************************************************************************

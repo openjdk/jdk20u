@@ -33,6 +33,8 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
         void recordThreadCreation();
         void recordParking();
         bool shallCreateVirtualThread();
+        long countParkings();
+        long countThreadCreations();
 };
 
 #endif // SHARE_RUNTIME_ADAPTIVE_THREAD_FACTORY_MONITOR_HPP

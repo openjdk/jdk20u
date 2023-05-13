@@ -82,7 +82,15 @@ long AdaptiveThreadFactoryMonitor::countNumberEventsInTimeWindow(SimpleConcurren
 }
 
 bool AdaptiveThreadFactoryMonitor::shallCreateVirtualThread() {
-    long numberParkingsInTimeWindow = countNumberEventsInTimeWindow(_parkingTimes, _parkingTimeWindowLength);
-    long numberThreadCreationsInTimeWindow = countNumberEventsInTimeWindow(_threadCreationTimes, _threadCreationTimeWindowLength);
+    long numberParkingsInTimeWindow = countParkings();
+    long numberThreadCreationsInTimeWindow = countThreadCreations();
     return true;
+}
+
+long AdaptiveThreadFactoryMonitor::countParkings() {
+    return countNumberEventsInTimeWindow(_parkingTimes, _parkingTimeWindowLength);
+}
+
+long AdaptiveThreadFactoryMonitor::countThreadCreations() {
+    return countNumberEventsInTimeWindow(_threadCreationTimes, _threadCreationTimeWindowLength);
 }

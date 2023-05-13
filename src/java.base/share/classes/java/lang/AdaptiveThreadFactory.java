@@ -114,6 +114,26 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         return augmentedTask;
     }
 
+    /* Methods for testing */
+
+    /**
+     * Comment
+     * @return Comment
+     */
+    public long getNumberParkingsInTimeWindow() {
+        long numberParkingsInTimeWindow = countParkingsInTimeWindow(this.adaptiveThreadFactoryId);
+        return numberParkingsInTimeWindow;
+    }
+
+    /**
+     * Comment
+     * @return Comment
+     */
+    public long getNumberThreadCreationsInTimeWindow() {
+        long numberThreadCreationsInTimeWindow = countThreadCreationsInTimeWindow(this.adaptiveThreadFactoryId);
+        return numberThreadCreationsInTimeWindow;
+    }
+
     /* Native methods */
 
     private native void addMonitor(int adaptiveThreadFactoryId);
@@ -130,4 +150,8 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
     static native void associateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
     static native void disassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
+    
+    /* Native methods for testing */
+    static native long countParkingsInTimeWindow(int adaptiveThreadFactoryId);
+    static native long countThreadCreationsInTimeWindow(int adaptiveThreadFactoryId);
 }

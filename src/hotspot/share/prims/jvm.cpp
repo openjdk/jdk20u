@@ -765,6 +765,14 @@ JVM_ENTRY(void, JVM_RecordParking(JNIEnv *env, jclass adaptiveThreadFactoryClass
   AdaptiveThreadFactoryMonitors::recordParking(adaptiveThreadFactoryId);
 JVM_END
 
+JVM_ENTRY(jlong, JVM_CountParkings(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId))
+  return AdaptiveThreadFactoryMonitors::countParkings(adaptiveThreadFactoryId);
+JVM_END
+
+JVM_ENTRY(jlong, JVM_CountThreadCreations(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId))
+  return AdaptiveThreadFactoryMonitors::countThreadCreations(adaptiveThreadFactoryId);
+JVM_END
+
 /* MODIFY END */
 
 // jdk.internal.vm.Continuation /////////////////////////////////////////////////////
