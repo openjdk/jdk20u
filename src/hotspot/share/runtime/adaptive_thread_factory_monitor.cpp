@@ -40,18 +40,10 @@ int AdaptiveThreadFactoryMonitor::getFactoryId() const {
 
 const long& AdaptiveThreadFactoryMonitor::addAndGetJavaLevelThreadId(long javaLevelThreadId) {
     _javaLevelThreadIds->append(javaLevelThreadId);
-    AdaptiveThreadFactoryUtility::checkRequirement(
-       javaLevelThreadId == _javaLevelThreadIds->get(javaLevelThreadId),
-       (char*)"AdaptiveThreadFactoryMonitor::addJavaLevelThreadId: The requested ID does not exist."
-    );
     return _javaLevelThreadIds->get(javaLevelThreadId);
 }
 
 const long& AdaptiveThreadFactoryMonitor::getJavaLevelThreadId(long javaLevelThreadId) {
-    AdaptiveThreadFactoryUtility::checkRequirement(
-       javaLevelThreadId == _javaLevelThreadIds->get(javaLevelThreadId),
-       (char*)"AdaptiveThreadFactoryMonitor::addJavaLevelThreadId: The requested ID does not exist."
-    );
     return _javaLevelThreadIds->get(javaLevelThreadId);
 }
 
@@ -84,7 +76,8 @@ long AdaptiveThreadFactoryMonitor::countNumberEventsInTimeWindow(SimpleConcurren
 bool AdaptiveThreadFactoryMonitor::shallCreateVirtualThread() {
     long numberParkingsInTimeWindow = countParkings();
     long numberThreadCreationsInTimeWindow = countThreadCreations();
-    return true;
+    bool decision = (_numberParkingsThreshold <= numberParkingsInTimeWindow) || (_numberThreadCreationsThreshold <= numberThreadCreationsInTimeWindow);
+    return decision;
 }
 
 long AdaptiveThreadFactoryMonitor::countParkings() {

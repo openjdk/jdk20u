@@ -38,10 +38,10 @@ public:
         pthread_mutex_lock(&_lock);
         SimpleConcurrentLinkedListNode<V>* newNode = new SimpleConcurrentLinkedListNode<V>();
         newNode->_value = value;
+        newNode->_next = nullptr;
         if(_head == nullptr) {
             _head = newNode;
-        }
-        else {
+        } else {
             SimpleConcurrentLinkedListNode<V>* current = _head;
             while(current->_next != nullptr) {
                 current = current->_next;
@@ -87,7 +87,6 @@ public:
             current = current->_next;
         }
         pthread_mutex_unlock(&_lock);
-        fprintf(stderr, "%s\n", "SimpleConcurrentLinkedList.get: The requested element is not contained in the list.");
         exit(1);
     } 
 
@@ -97,16 +96,17 @@ public:
         SimpleConcurrentLinkedListNode<V>* current = _head;
         if(current == nullptr) {
             pthread_mutex_unlock(&_lock);
-            return 0;
+            return counter;
         } 
-        while(current != nullptr) {
-            if(current->_value < lowerBound) {
-                SimpleConcurrentLinkedListNode<V>* temporary = current;
+        while(current->_next != nullptr) {
+            if(current->_next->_value < lowerBound) {
+                SimpleConcurrentLinkedListNode<V>* temporary = current->_next;
+                current->_next = current->_next->_next;
                 delete temporary;
             } else {
                 counter += 1;
+                current = current->_next;
             }
-            current = current->_next;
         }
         pthread_mutex_unlock(&_lock);
         return counter;

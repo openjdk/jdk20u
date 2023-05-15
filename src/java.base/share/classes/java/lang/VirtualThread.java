@@ -429,7 +429,7 @@ final class VirtualThread extends BaseVirtualThread {
         if (notifyJvmti) notifyJvmtiUnmountBegin(false);
         unmount();
         /* MODIFY START */
-        if(isAssociatedWithAdaptiveThreadFactory()) {
+        if(this.isAssociatedWithAdaptiveThreadFactory()) {
             AdaptiveThreadFactory.disassociateOSThreadFromMonitor(
                 this.getAdaptiveThreadFactoryId(),
                 this.threadId()
@@ -443,7 +443,7 @@ final class VirtualThread extends BaseVirtualThread {
             mount();
             if (notifyJvmti) notifyJvmtiMountEnd(false);
             /* MODIFY START */
-            if(isAssociatedWithAdaptiveThreadFactory()) {
+            if(this.isAssociatedWithAdaptiveThreadFactory()) {
                 AdaptiveThreadFactory.associateOSThreadWithMonitor(
                     this.getAdaptiveThreadFactoryId(),
                     this.threadId()

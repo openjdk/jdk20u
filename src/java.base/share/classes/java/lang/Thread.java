@@ -3116,7 +3116,7 @@ public class Thread implements Runnable {
      */
     public int getAdaptiveThreadFactoryId() throws UnsupportedOperationException {
         return this.adaptiveThreadFactoryAssociationInformation.getAdaptiveThreadFactoryId();
-    }    
-
+    }
+    
     /* MODIFY END */
 }

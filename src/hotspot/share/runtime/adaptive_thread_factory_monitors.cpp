@@ -37,10 +37,6 @@ void AdaptiveThreadFactoryMonitors::removeAdaptiveThreadFactoryMonitor(int adapt
 
 AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitors::getMonitor(int adaptiveThreadFactoryId) {
     AdaptiveThreadFactoryMonitor& monitor = _adaptiveThreadFactoryMonitors->get(adaptiveThreadFactoryId);
-    AdaptiveThreadFactoryUtility::checkRequirement(
-       monitor.getFactoryId() == adaptiveThreadFactoryId,
-       (char*)"AdaptiveThreadFactoryMonitors::associateWithMonitor: The provided ID does not exist."
-    );
     return monitor;
 }
 
