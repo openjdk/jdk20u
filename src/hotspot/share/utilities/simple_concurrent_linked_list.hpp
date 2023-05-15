@@ -98,6 +98,23 @@ public:
             pthread_mutex_unlock(&_lock);
             return counter;
         } 
+        SimpleConcurrentLinkedListNode<V>* initial = new SimpleConcurrentLinkedListNode<V>();
+        initial->_next = _head;
+        SimpleConcurrentLinkedListNode<V>* predecessor = initial;
+        while(current != nullptr) {
+            if(current->_value < lowerBound) {
+                predecessor->_next = current->_next;
+                delete current;
+                current = predecessor->_next;
+            } else {
+                predecessor = current;
+                current = current->_next;
+                counter += 1;
+            }
+        }
+        _head = initial->_next;
+        delete initial;
+        /*
         while(current->_next != nullptr) {
             if(current->_next->_value < lowerBound) {
                 SimpleConcurrentLinkedListNode<V>* temporary = current->_next;
@@ -108,6 +125,7 @@ public:
                 current = current->_next;
             }
         }
+        */
         pthread_mutex_unlock(&_lock);
         return counter;
     }
