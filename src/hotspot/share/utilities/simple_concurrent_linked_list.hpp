@@ -72,8 +72,12 @@ public:
             SimpleConcurrentLinkedListNode<V>* temporary = current->_next;
             current->_next = current->_next->_next;
             delete temporary;
+            pthread_mutex_unlock(&_lock);
+            return;
         }
         pthread_mutex_unlock(&_lock);
+        fprintf(stderr, "%s\n", "SimpleConcurrentLinkedList.get: The specified element is not contained in the list.");
+        exit(1);
     }  
 
     const V& get(const V& value) {
@@ -87,6 +91,7 @@ public:
             current = current->_next;
         }
         pthread_mutex_unlock(&_lock);
+        fprintf(stderr, "%s\n", "SimpleConcurrentLinkedList.get: The requested element is not contained in the list.");
         exit(1);
     } 
 
@@ -114,18 +119,6 @@ public:
         }
         _head = initial->_next;
         delete initial;
-        /*
-        while(current->_next != nullptr) {
-            if(current->_next->_value < lowerBound) {
-                SimpleConcurrentLinkedListNode<V>* temporary = current->_next;
-                current->_next = current->_next->_next;
-                delete temporary;
-            } else {
-                counter += 1;
-                current = current->_next;
-            }
-        }
-        */
         pthread_mutex_unlock(&_lock);
         return counter;
     }
