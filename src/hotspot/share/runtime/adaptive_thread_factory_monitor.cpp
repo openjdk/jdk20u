@@ -87,3 +87,7 @@ long AdaptiveThreadFactoryMonitor::countParkings() {
 long AdaptiveThreadFactoryMonitor::countThreadCreations() {
     return countNumberEventsInTimeWindow(_threadCreationTimes, _threadCreationTimeWindowLength);
 }
+
+long AdaptiveThreadFactoryMonitor::countNumberThreads() {
+    return _javaLevelThreadIds->size();
+}

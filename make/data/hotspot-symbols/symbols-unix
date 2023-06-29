@@ -219,6 +219,7 @@ JVM_DisassociateFromMonitor
 JVM_RecordParking
 JVM_CountParkings
 JVM_CountThreadCreations
+JVM_CountNumberThreads
 # MODIFY END
 
 # Module related API's

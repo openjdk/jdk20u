@@ -837,6 +837,9 @@ JVM_CountParkings(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveT
 JNIEXPORT jlong JNICALL
 JVM_CountThreadCreations(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId);
 
+JNIEXPORT jlong JNICALL
+JVM_CountNumberThreads(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId);
+
 /* END MODIFY */
 
 /*************************************************************************

@@ -134,6 +134,18 @@ public:
         _head = nullptr;
         pthread_mutex_unlock(&_lock);
     }
+
+    long size() {
+        pthread_mutex_lock(&_lock);
+        long numberElements = 0;
+        SimpleConcurrentLinkedListNode<V>* current = _head;
+        while(current != nullptr) {
+            numberElements++;
+            current = current->_next;
+        }
+        pthread_mutex_unlock(&_lock);
+        return numberElements;
+    }
     
 };
 

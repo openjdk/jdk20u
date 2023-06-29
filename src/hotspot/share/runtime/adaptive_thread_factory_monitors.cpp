@@ -104,6 +104,11 @@ long AdaptiveThreadFactoryMonitors::countThreadCreations(int adaptiveThreadFacto
     return monitor.countThreadCreations();
 }
 
+long AdaptiveThreadFactoryMonitors::countNumberThreads(int adaptiveThreadFactoryId) {
+    AdaptiveThreadFactoryMonitor& monitor = getMonitor(adaptiveThreadFactoryId);
+    return monitor.countNumberThreads();
+}
+
 void adaptive_thread_factory_monitors_initialisation() {
     AdaptiveThreadFactoryMonitors::initialiseAdaptiveThreadFactoryMonitors();
 }

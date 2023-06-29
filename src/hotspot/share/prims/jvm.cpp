@@ -773,6 +773,10 @@ JVM_ENTRY(jlong, JVM_CountThreadCreations(JNIEnv *env, jclass adaptiveThreadFact
   return AdaptiveThreadFactoryMonitors::countThreadCreations(adaptiveThreadFactoryId);
 JVM_END
 
+JVM_ENTRY(jlong, JVM_CountNumberThreads(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId))
+  return AdaptiveThreadFactoryMonitors::countNumberThreads(adaptiveThreadFactoryId);
+JVM_END
+
 /* MODIFY END */
 
 // jdk.internal.vm.Continuation /////////////////////////////////////////////////////

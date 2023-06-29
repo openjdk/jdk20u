@@ -16,6 +16,7 @@ static JNINativeMethod methods[] = {
     {"disassociateOSThreadFromMonitor", "(IJ)V", (void*)&JVM_DisassociateFromMonitor},
     {"countParkingsInTimeWindow", "(I)J", (void*)&JVM_CountParkings},
     {"countThreadCreationsInTimeWindow", "(I)J", (void*)&JVM_CountThreadCreations},
+    {"countNumberThreads", "(I)J", (void*)&JVM_CountNumberThreads},
 };
 
 JNIEXPORT void JNICALL

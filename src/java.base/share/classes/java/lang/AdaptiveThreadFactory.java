@@ -134,6 +134,15 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         return numberThreadCreationsInTimeWindow;
     }
 
+    /**
+     * Comment
+     * @return Comment
+     */
+    public long getNumberThreads() {
+        long numberThreads = countNumberThreads(this.adaptiveThreadFactoryId);
+        return numberThreads;
+    }
+
     /* Native methods */
 
     private native void addMonitor(int adaptiveThreadFactoryId);
@@ -154,4 +163,5 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     /* Native methods for testing */
     static native long countParkingsInTimeWindow(int adaptiveThreadFactoryId);
     static native long countThreadCreationsInTimeWindow(int adaptiveThreadFactoryId);
+    static native long countNumberThreads(int adaptiveThreadFactoryId);
 }
