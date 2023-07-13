@@ -140,7 +140,7 @@ public:
         long numberElements = 0;
         SimpleConcurrentLinkedListNode<V>* current = _head;
         while(current != nullptr) {
-            numberElements++;
+            numberElements += 1;
             current = current->_next;
         }
         pthread_mutex_unlock(&_lock);
