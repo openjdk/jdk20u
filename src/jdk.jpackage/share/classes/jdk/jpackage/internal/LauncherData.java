@@ -62,10 +62,6 @@ final class LauncherData {
         return qualifiedClassName;
     }
 
-    boolean isClassNameFromMainJar() {
-        return jarMainClass != null;
-    }
-
     String packageName() {
         int sepIdx = qualifiedClassName.lastIndexOf('.');
         if (sepIdx < 0) {
@@ -215,7 +211,6 @@ final class LauncherData {
                 if (attrs != null) {
                     launcherData.qualifiedClassName = attrs.getValue(
                             Attributes.Name.MAIN_CLASS);
-                    launcherData.jarMainClass = launcherData.qualifiedClassName;
                 }
             }
         }
@@ -352,7 +347,7 @@ final class LauncherData {
             // of `release` file.
 
             final Path releaseFile;
-            if (!OperatingSystem.isMacOS()) {
+            if (!Platform.isMac()) {
                 releaseFile = cookedRuntime.resolve("release");
             } else {
                 // On Mac `cookedRuntime` can be runtime root or runtime home.
