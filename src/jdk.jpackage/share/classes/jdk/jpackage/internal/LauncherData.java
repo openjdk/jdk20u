@@ -309,7 +309,6 @@ final class LauncherData {
     }
 
     private String qualifiedClassName;
-    private String jarMainClass;
     private Path mainJarName;
     private List<Path> classPath;
     private List<Path> modulePath;
