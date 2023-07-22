@@ -12,13 +12,31 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         registerNatives();
     }
 
+    private enum ExecutionMode {
+        HETEROGENEOUS, HOMOGENEOUS
+    }
+
+    private enum CurrentThreadState {
+        PLATFORM, VIRTUAL
+    }
+
+    // parameters set by user
     private int adaptiveThreadFactoryId;
-    private long parkingTimeWindowLength;
-    private long threadCreationTimeWindowLength;
+    private long parkingTimeWindowLength; // in milliseconds
+    private long threadCreationTimeWindowLength; // in milliseconds
     private long numberParkingsThreshold;
     private long numberThreadCreationsThreshold;
     private ThreadFactory platformThreadFactory;
     private ThreadFactory virtualThreadFactory;
+    private ExecutionMode executionMode;
+    private int stateQueryInterval; // in milliseconds
+    private int numberStateRepetitionsUntilTransition;
+    private Runnable threadCreationHandler;
+
+    // for internal use
+    private Thread stateQueryingThread;
+    private LinkedList<Boolean> queryResults;
+    private LinkedList<Thread> threads;
 
     /**
      * Comment 
@@ -46,6 +64,63 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         );
         this.platformThreadFactory = Thread.ofPlatform().factory();
         this.virtualThreadFactory = Thread.ofVirtual().factory();
+        this.executionMode = ExecutionMode.STANDARD;
+    }
+
+    /**
+     * Comment 
+     * 
+     * @param   adaptiveThreadFactoryId Comment
+     * @param   parkingTimeWindowLength Comment
+     * @param   threadCreationTimeWindowLength Comment
+     * @param   numberParkingsThreshold Comment
+     * @param   numberThreadCreationsThreshold Comment
+     * @param   stateQueryInterval Comment
+     * @param   numberStateRepetitionsUntilTransition Comment
+     * @param   threadCreationHandler Comment 
+     */
+    public AdaptiveThreadFactory(
+        int adaptiveThreadFactoryId, 
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength,
+        long numberParkingsThreshold,
+        long numberThreadCreationsThreshold,
+        int stateQueryInterval,
+        int numberStateRepetitionsUntilTransition,
+        Runnable threadCreationHandler 
+    ) {
+        this(
+            adaptiveThreadFactoryId,
+            parkingTimeWindowLength,
+            threadCreationTimeWindowLength,
+            numberParkingsThreshold,
+            numberThreadCreationsThreshold
+        );
+        this.stateQueryInterval = stateQueryInterval;
+        this.numberStateRepetitionsUntilTransition = numberStateRepetitionsUntilTransition;
+        this.threadCreationHandler = threadCreationHandler;
+        this.executionMode = ExecutionMode.PERIODIC;
+    }
+
+    private boolean doTransition(boolean newQueryResult) {
+        queryResults.add(newQueryResult);
+        if(queryResults.size() > this.numberStateRepetitionsUntilTransition) {
+            queryResults.poll();
+        }
+        
+    }
+
+    private void startQueryingThread(
+    ) {
+        this.startQueryingThread = () -> {
+            while(!Thread.currentThread().isInterrupted()) {
+                final boolean useVirtualThread = queryMonitor(this.adaptiveThreadFactoryId);
+                
+                Thread.sleep(this.stateQueryInterval);
+            }
+        };
+        this.startQueryingThread.setDaemon(true);
+        this.startQueryingThread.start();
     }
 
     /**
@@ -76,14 +151,54 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     /**
+     * Comment 
+     * 
+     * @param   parkingTimeWindowLength Comment
+     * @param   threadCreationTimeWindowLength Comment
+     * @param   numberParkingsThreshold Comment
+     * @param   numberThreadCreationsThreshold Comment
+     * @param   stateQueryInterval Comment
+     * @param   numberStateRepetitionsUntilTransition Comment
+     * @param   threadCreationHandler Comment
+     */
+    public void setParameters(
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength,
+        long numberParkingsThreshold,
+        long numberThreadCreationsThreshold,
+        int stateQueryInterval,
+        int numberStateRepetitionsUntilTransition,
+        Runnable threadCreationHandler 
+    ) {
+        setParameters(
+            parkingTimeWindowLength,
+            threadCreationTimeWindowLength,
+            numberParkingsThreshold,
+            numberThreadCreationsThreshold
+        );
+        this.stateQueryInterval = stateQueryInterval;
+        this.numberStateRepetitionsUntilTransition = numberStateRepetitionsUntilTransition;
+        this.threadCreationHandler = threadCreationHandler;
+        
+    }
+
+    /**
      * Comment
      * @return Comment
      */
     public Thread newThread(Runnable originalTask) {
-        final boolean response = queryMonitor(this.adaptiveThreadFactoryId);
         final Runnable augmentedTask = augmentTask(originalTask);
         Thread newThread;
-        if(response) {
+        if(executionMode.equals(ExecutionMode.STANDARD)) {
+
+        }
+        newThread.associateWithAdaptiveThreadFactory(this.adaptiveThreadFactoryId);
+        return newThread;
+
+        final boolean useVirtualThread = queryMonitor(this.adaptiveThreadFactoryId);
+        final Runnable augmentedTask = augmentTask(originalTask);
+        Thread newThread;
+        if(useVirtualThread) {
             newThread = virtualThreadFactory.newThread(augmentedTask);
         } else {
             newThread = platformThreadFactory.newThread(augmentedTask);
@@ -110,6 +225,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
                 Thread.currentThread().getAdaptiveThreadFactoryId(), 
                 Thread.currentThread().threadId() 
             );
+            threads.remove(Thread.currentThread());
         };
         return augmentedTask;
     }
