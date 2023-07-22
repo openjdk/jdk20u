@@ -37,10 +37,10 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     private ExecutionMode executionMode;
     private ThreadFactory platformThreadFactory;
     private ThreadFactory virtualThreadFactory;
+    private final ConcurrentLinkedQueue<Thread> threads;
 
     // ExecutionMode.HOMOGENEOUS
     private Thread transitionManager;
-    private ConcurrentLinkedQueue<Thread> threads;
     private ThreadType currentThreadType;
     private LinkedList<ThreadType> queryResults;
 
@@ -72,7 +72,8 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         // internal use
         this.platformThreadFactory = Thread.ofPlatform().factory();
         this.virtualThreadFactory = Thread.ofVirtual().factory();
-        this.executionMode = ExecutionMode.HOMOGENEOUS;
+        this.threads = new ConcurrentLinkedQueue<Thread>();
+        this.executionMode = ExecutionMode.HETEROGENEOUS;
     }
 
     /**
@@ -109,7 +110,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
         this.threadCreationHandler = threadCreationHandler;
         // internal use
-        this.threads = new ConcurrentLinkedQueue<Thread>();
         this.queryResults = new LinkedList<ThreadType>();
         this.currentThreadType = ThreadType.PLATFORM;
         this.executionMode = ExecutionMode.HOMOGENEOUS;
@@ -245,7 +245,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
                 Thread.currentThread().getAdaptiveThreadFactoryId(), 
                 Thread.currentThread().threadId() 
             );
-            threads.remove(Thread.currentThread());
+            this.threads.remove(Thread.currentThread());
         };
         return augmentedTask;
     }
