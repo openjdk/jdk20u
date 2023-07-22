@@ -16,27 +16,31 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         HETEROGENEOUS, HOMOGENEOUS
     }
 
-    private enum CurrentThreadState {
+    private enum ThreadType {
         PLATFORM, VIRTUAL
     }
 
-    // parameters set by user
+    // user specification
     private int adaptiveThreadFactoryId;
     private long parkingTimeWindowLength; // in milliseconds
     private long threadCreationTimeWindowLength; // in milliseconds
     private long numberParkingsThreshold;
     private long numberThreadCreationsThreshold;
-    private ThreadFactory platformThreadFactory;
-    private ThreadFactory virtualThreadFactory;
-    private ExecutionMode executionMode;
     private int stateQueryInterval; // in milliseconds
-    private int numberStateRepetitionsUntilTransition;
+    private int numberRecurrencesUntilTransition;
     private Runnable threadCreationHandler;
 
-    // for internal use
-    private Thread stateQueryingThread;
-    private LinkedList<Boolean> queryResults;
-    private LinkedList<Thread> threads;
+    // internal use
+
+    private ExecutionMode executionMode;
+    private ThreadFactory platformThreadFactory;
+    private ThreadFactory virtualThreadFactory;
+
+    // ExecutionMode.HOMOGENEOUS
+    private Thread transitionManager;
+    private ConcurrentLinkedQueue<Thread> threads;
+    private ThreadType currentThreadType;
+    private LinkedList<ThreadType> queryResults;
 
     /**
      * Comment 
@@ -54,6 +58,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         long numberParkingsThreshold,
         long numberThreadCreationsThreshold
     ) {
+        // user specification
         this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
         addMonitor(this.adaptiveThreadFactoryId);
         setParameters(
@@ -62,9 +67,10 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             numberParkingsThreshold,
             numberThreadCreationsThreshold
         );
+        // internal use
         this.platformThreadFactory = Thread.ofPlatform().factory();
         this.virtualThreadFactory = Thread.ofVirtual().factory();
-        this.executionMode = ExecutionMode.STANDARD;
+        this.executionMode = ExecutionMode.HOMOGENEOUS;
     }
 
     /**
@@ -76,7 +82,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * @param   numberParkingsThreshold Comment
      * @param   numberThreadCreationsThreshold Comment
      * @param   stateQueryInterval Comment
-     * @param   numberStateRepetitionsUntilTransition Comment
+     * @param   numberRecurrencesUntilTransition Comment
      * @param   threadCreationHandler Comment 
      */
     public AdaptiveThreadFactory(
@@ -86,9 +92,10 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         long numberParkingsThreshold,
         long numberThreadCreationsThreshold,
         int stateQueryInterval,
-        int numberStateRepetitionsUntilTransition,
+        int numberRecurrencesUntilTransition,
         Runnable threadCreationHandler 
     ) {
+        // user specification
         this(
             adaptiveThreadFactoryId,
             parkingTimeWindowLength,
@@ -97,30 +104,58 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             numberThreadCreationsThreshold
         );
         this.stateQueryInterval = stateQueryInterval;
-        this.numberStateRepetitionsUntilTransition = numberStateRepetitionsUntilTransition;
+        this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
         this.threadCreationHandler = threadCreationHandler;
-        this.executionMode = ExecutionMode.PERIODIC;
+        // internal use
+        this.threads = new ConcurrentLinkedQueue<Thread>();
+        this.queryResults = new LinkedList<ThreadType>();
+        this.currentThreadType = ThreadType.PLATFORM;
+        this.executionMode = ExecutionMode.HOMOGENEOUS;
     }
 
-    private boolean doTransition(boolean newQueryResult) {
-        queryResults.add(newQueryResult);
-        if(queryResults.size() > this.numberStateRepetitionsUntilTransition) {
+    private boolean transition(ThreadType newQueryResult) {
+        this.queryResults.add(newQueryResult);
+        if(queryResults.size() > this.numberRecurrencesUntilTransition) {
             queryResults.poll();
         }
-        
+        final boolean identicalQueryResults = this.queryResults.stream().distinct().count() == 1;
+        if(identicalQueryResults) {
+            if(!newQueryResult.equals(this.currentThreadType)) {
+                this.currentThreadType = newQueryResult;
+                return true;
+            }
+        }
+        return false;
     }
 
-    private void startQueryingThread(
+    private void performTransition() {
+        for(final Thread thread : threads) {
+            thread.setAsInterrupted();
+            try {
+                thread.join();
+            } catch(InterruptedException interruptedException) {
+                throw new RuntimeException(interruptedException.getMessage());
+            }
+            this.threadCreationHandler.run();
+        }
+    }
+
+    private void startTransitionManger(
     ) {
-        this.startQueryingThread = () -> {
+        this.transitionManager = () -> {
             while(!Thread.currentThread().isInterrupted()) {
-                final boolean useVirtualThread = queryMonitor(this.adaptiveThreadFactoryId);
-                
+                if(!transitioning) {
+                    final ThreadType newQueryResult = queryMonitor();
+                    final boolean transition = transition(newQueryResult)
+                    if(transition(newQueryResult)) {
+                        performTransition();
+                    }
+                }
                 Thread.sleep(this.stateQueryInterval);
             }
         };
-        this.startQueryingThread.setDaemon(true);
-        this.startQueryingThread.start();
+        this.transitionManager.setDaemon(true);
+        this.transitionManager.start();
     }
 
     /**
@@ -158,7 +193,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * @param   numberParkingsThreshold Comment
      * @param   numberThreadCreationsThreshold Comment
      * @param   stateQueryInterval Comment
-     * @param   numberStateRepetitionsUntilTransition Comment
+     * @param   numberRecurrencesUntilTransition Comment
      * @param   threadCreationHandler Comment
      */
     public void setParameters(
@@ -167,7 +202,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         long numberParkingsThreshold,
         long numberThreadCreationsThreshold,
         int stateQueryInterval,
-        int numberStateRepetitionsUntilTransition,
+        int numberRecurrencesUntilTransition,
         Runnable threadCreationHandler 
     ) {
         setParameters(
@@ -177,9 +212,9 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             numberThreadCreationsThreshold
         );
         this.stateQueryInterval = stateQueryInterval;
-        this.numberStateRepetitionsUntilTransition = numberStateRepetitionsUntilTransition;
+        this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
         this.threadCreationHandler = threadCreationHandler;
-        
+        // TO DO: change execution mode
     }
 
     /**
@@ -189,21 +224,22 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     public Thread newThread(Runnable originalTask) {
         final Runnable augmentedTask = augmentTask(originalTask);
         Thread newThread;
-        if(executionMode.equals(ExecutionMode.STANDARD)) {
-
-        }
-        newThread.associateWithAdaptiveThreadFactory(this.adaptiveThreadFactoryId);
-        return newThread;
-
-        final boolean useVirtualThread = queryMonitor(this.adaptiveThreadFactoryId);
-        final Runnable augmentedTask = augmentTask(originalTask);
-        Thread newThread;
-        if(useVirtualThread) {
-            newThread = virtualThreadFactory.newThread(augmentedTask);
+        if(executionMode.equals(ExecutionMode.HETEROGENEOUS)) {
+            final ThreadType newQueryResult = queryMonitor();
+            if(newQueryResult.equals(ThreadType.PLATFORM)) {
+                newThread = platformThreadFactory.newThread(augmentedTask);
+            } else {
+                newThread = virtualThreadFactory.newThread(augmentedTask);
+            }
         } else {
-            newThread = platformThreadFactory.newThread(augmentedTask);
+            if(this.currentThreadType.equals(ThreadType.PLATFORM)) {
+                newThread = platformThreadFactory.newThread(augmentedTask);
+            } else {
+                newThread = virtualThreadFactory.newThread(augmentedTask);
+            }
         }
         newThread.associateWithAdaptiveThreadFactory(this.adaptiveThreadFactoryId);
+        threads.add(newThread);
         return newThread;
     }
 
@@ -228,6 +264,15 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             threads.remove(Thread.currentThread());
         };
         return augmentedTask;
+    }
+
+    private ThreadType queryMonitor() {
+        final boolean useVirtualThread = queryMonitor(this.adaptiveThreadFactoryId);
+        if(useVirtualThread) {
+            return ThreadType.VIRTUAL;
+        } else {
+            return ThreadType.PLATFORM;
+        }
     }
 
     /* Methods for testing */

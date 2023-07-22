@@ -3076,24 +3076,46 @@ public class Thread implements Runnable {
     /* MODIFY START */
 
     private class AdaptiveThreadFactoryAssociationInformation {
+
         private boolean isAssociatedWithAdaptiveThreadFactory;
         private int adaptiveThreadFactoryId;
+        private boolean isInterrupted;
+
         public AdaptiveThreadFactoryAssociationInformation() {
             this.isAssociatedWithAdaptiveThreadFactory = false;
         }
+
         public AdaptiveThreadFactoryAssociationInformation(int adaptiveThreadFactoryId) {
             this.isAssociatedWithAdaptiveThreadFactory = true;
             this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+            this.isInterrupted = false;
         }
-        public boolean isAssociatedWithAdaptiveThreadFactory() {
-            return this.isAssociatedWithAdaptiveThreadFactory;
-        }
-        public int getAdaptiveThreadFactoryId() {
+
+        private void checkAssociation() {
             if(!this.isAssociatedWithAdaptiveThreadFactory) {
                 throw new UnsupportedOperationException("The thread is not associated with an adaptive tread factory.");
             }
+        }
+
+        public boolean isAssociatedWithAdaptiveThreadFactory() {
+            return this.isAssociatedWithAdaptiveThreadFactory;
+        }
+
+        public int getAdaptiveThreadFactoryId() {
+            checkAssociation();
             return this.adaptiveThreadFactoryId;
         }
+
+        public void setAsInterrupted() {
+            checkAssociation();
+            this.isInterrupted = true;
+        }
+
+        public boolean isInterrupted() {
+            checkAssociation();
+            return this.isInterrupted;
+        }
+
     }
 
     private AdaptiveThreadFactoryAssociationInformation adaptiveThreadFactoryAssociationInformation;
@@ -3116,6 +3138,18 @@ public class Thread implements Runnable {
      */
     public int getAdaptiveThreadFactoryId() throws UnsupportedOperationException {
         return this.adaptiveThreadFactoryAssociationInformation.getAdaptiveThreadFactoryId();
+    }
+
+    void setAsInterrupted() throws UnsupportedOperationException {
+        this.adaptiveThreadFactoryAssociationInformation.setAsInterrupted();
+    }
+
+    /**
+     * Comment
+     * @return Comment  
+     */
+    public boolean isInterruptedByAdaptiveThreadFactory() throws UnsupportedOperationException {
+        return this.adaptiveThreadFactoryAssociationInformation.isInterrupted();
     }
     
     /* MODIFY END */
