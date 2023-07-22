@@ -3140,7 +3140,7 @@ public class Thread implements Runnable {
         return this.adaptiveThreadFactoryAssociationInformation.getAdaptiveThreadFactoryId();
     }
 
-    void setAsInterrupted() throws UnsupportedOperationException {
+    void setAsInterruptedByAdaptiveThreadFactory() throws UnsupportedOperationException {
         this.adaptiveThreadFactoryAssociationInformation.setAsInterrupted();
     }
 

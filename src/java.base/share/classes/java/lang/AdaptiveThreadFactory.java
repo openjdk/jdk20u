@@ -1,6 +1,8 @@
 package java.lang;
 
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.LinkedList;
 
 /**
  * Comment
@@ -111,9 +113,11 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         this.queryResults = new LinkedList<ThreadType>();
         this.currentThreadType = ThreadType.PLATFORM;
         this.executionMode = ExecutionMode.HOMOGENEOUS;
+        // start background thread
+        startTransitionManager();
     }
 
-    private boolean transition(ThreadType newQueryResult) {
+    private boolean shallTransition(ThreadType newQueryResult) {
         this.queryResults.add(newQueryResult);
         if(queryResults.size() > this.numberRecurrencesUntilTransition) {
             queryResults.poll();
@@ -130,7 +134,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
     private void performTransition() {
         for(final Thread thread : threads) {
-            thread.setAsInterrupted();
+            thread.setAsInterruptedByAdaptiveThreadFactory();
             try {
                 thread.join();
             } catch(InterruptedException interruptedException) {
@@ -140,22 +144,31 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         }
     }
 
-    private void startTransitionManger(
-    ) {
-        this.transitionManager = () -> {
+    private void startTransitionManager() {
+        this.transitionManager = new Thread(() -> {
             while(!Thread.currentThread().isInterrupted()) {
-                if(!transitioning) {
-                    final ThreadType newQueryResult = queryMonitor();
-                    final boolean transition = transition(newQueryResult)
-                    if(transition(newQueryResult)) {
-                        performTransition();
-                    }
+                final ThreadType newQueryResult = queryMonitor();
+                final boolean shallTransition = shallTransition(newQueryResult);
+                if(shallTransition) {
+                    performTransition();
                 }
-                Thread.sleep(this.stateQueryInterval);
+                try {
+                    Thread.sleep(this.stateQueryInterval);
+                } catch(InterruptedException interruptedException) {
+                    throw new RuntimeException(interruptedException.getMessage());
+                }
             }
-        };
+        });
         this.transitionManager.setDaemon(true);
         this.transitionManager.start();
+    }
+
+    private void stopTransitionManager() {
+        try {
+            this.transitionManager.join();
+        } catch(InterruptedException interruptedException) {
+            throw new RuntimeException(interruptedException.getMessage());
+        }
     }
 
     /**
@@ -183,38 +196,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             this.numberParkingsThreshold,
             this.numberThreadCreationsThreshold
         );
-    }
-
-    /**
-     * Comment 
-     * 
-     * @param   parkingTimeWindowLength Comment
-     * @param   threadCreationTimeWindowLength Comment
-     * @param   numberParkingsThreshold Comment
-     * @param   numberThreadCreationsThreshold Comment
-     * @param   stateQueryInterval Comment
-     * @param   numberRecurrencesUntilTransition Comment
-     * @param   threadCreationHandler Comment
-     */
-    public void setParameters(
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        long numberParkingsThreshold,
-        long numberThreadCreationsThreshold,
-        int stateQueryInterval,
-        int numberRecurrencesUntilTransition,
-        Runnable threadCreationHandler 
-    ) {
-        setParameters(
-            parkingTimeWindowLength,
-            threadCreationTimeWindowLength,
-            numberParkingsThreshold,
-            numberThreadCreationsThreshold
-        );
-        this.stateQueryInterval = stateQueryInterval;
-        this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
-        this.threadCreationHandler = threadCreationHandler;
-        // TO DO: change execution mode
     }
 
     /**
@@ -247,6 +228,9 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * Comment
      */
     public void close() {
+        if(this.executionMode.equals(ExecutionMode.HOMOGENEOUS)) {
+            stopTransitionManager();
+        }
         removeMonitor(this.adaptiveThreadFactoryId);
     }
 
