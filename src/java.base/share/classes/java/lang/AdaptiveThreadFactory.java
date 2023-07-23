@@ -161,7 +161,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
                 try {
                     Thread.sleep(this.stateQueryInterval);
                 } catch(InterruptedException interruptedException) {
-                    throw new RuntimeException(interruptedException.getMessage());
+                    return;
                 }
             }
         });
@@ -170,6 +170,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private void stopTransitionManager() {
+        this.transitionManager.interrupt();
         try {
             this.transitionManager.join();
         } catch(InterruptedException interruptedException) {
@@ -230,16 +231,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         return newThread;
     }
 
-    /*
-     * Comment
-     */
-    public void close() {
-        if(this.executionMode.equals(ExecutionMode.HOMOGENEOUS)) {
-            stopTransitionManager();
-        }
-        removeMonitor(this.adaptiveThreadFactoryId);
-    }
-
     private Runnable augmentTask(Runnable originalTask) {
         final Runnable augmentedTask = () -> {
             registerJavaThreadAndAssociateOSThreadWithMonitor(
@@ -263,6 +254,16 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         } else {
             return ThreadType.PLATFORM;
         }
+    }
+
+    /*
+     * Comment
+     */
+    public void close() {
+        if(this.executionMode.equals(ExecutionMode.HOMOGENEOUS)) {
+            stopTransitionManager();
+        }
+        removeMonitor(this.adaptiveThreadFactoryId);
     }
 
     /* Methods for testing */
