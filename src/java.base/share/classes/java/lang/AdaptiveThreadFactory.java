@@ -3,6 +3,7 @@ package java.lang;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.LinkedList;
+import java.util.Iterator;
 
 /**
  * Comment
@@ -133,7 +134,11 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private void performTransition() {
-        for(final Thread thread : threads) {
+        final int numberThreads = this.threads.size();
+        int index = 0;
+        Iterator<Thread> iterator = this.threads.iterator();
+        while(iterator.hasNext() && index < numberThreads) {
+            Thread thread = iterator.next();
             thread.setAsInterruptedByAdaptiveThreadFactory();
             try {
                 thread.join();
@@ -141,6 +146,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
                 throw new RuntimeException(interruptedException.getMessage());
             }
             this.threadCreationHandler.run();
+            index += 1;
         }
     }
 
