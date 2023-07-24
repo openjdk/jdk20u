@@ -43,6 +43,19 @@ AdaptiveThreadFactoryMonitor& AdaptiveThreadFactoryMonitors::getMonitor(int adap
 void AdaptiveThreadFactoryMonitors::setMonitorParameters(
     int adaptiveThreadFactoryId, 
     long parkingTimeWindowLength, 
+    long threadCreationTimeWindowLength
+) {
+    AdaptiveThreadFactoryMonitor& associatedMonitor = getMonitor(adaptiveThreadFactoryId);
+    associatedMonitor.setParameters(
+        parkingTimeWindowLength, 
+        threadCreationTimeWindowLength
+    );
+}
+
+/*
+void AdaptiveThreadFactoryMonitors::setMonitorParameters(
+    int adaptiveThreadFactoryId, 
+    long parkingTimeWindowLength, 
     long threadCreationTimeWindowLength, 
     long numberParkingsThreshold,
     long numberThreadCreationsThreshold
@@ -55,12 +68,15 @@ void AdaptiveThreadFactoryMonitors::setMonitorParameters(
         numberThreadCreationsThreshold
     );
 }
+*/
 
+/*
 bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
     AdaptiveThreadFactoryMonitor& monitor = getMonitor(adaptiveThreadFactoryId);
     bool decision = monitor.shallCreateVirtualThread();
     return decision;
 }
+*/
 
 void AdaptiveThreadFactoryMonitors::registerWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
     AdaptiveThreadFactoryMonitor& monitor = getMonitor(adaptiveThreadFactoryId);

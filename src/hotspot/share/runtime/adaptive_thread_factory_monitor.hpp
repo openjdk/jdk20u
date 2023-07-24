@@ -9,8 +9,10 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
         int _adaptiveThreadFactoryId;
         long _parkingTimeWindowLength;
         long _threadCreationTimeWindowLength;
+        /*
         long _numberParkingsThreshold;
         long _numberThreadCreationsThreshold;
+        */
         SimpleConcurrentLinkedList<long>* _javaLevelThreadIds;
         SimpleConcurrentLinkedList<long>* _threadCreationTimes;
         SimpleConcurrentLinkedList<long>* _parkingTimes;
@@ -21,10 +23,16 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
         AdaptiveThreadFactoryMonitor(int adaptiveThreadFactoryId);
         void setParameters(
             long parkingTimeWindowLength, 
+            long threadCreationTimeWindowLength
+        );
+        /*
+        void setParameters(
+            long parkingTimeWindowLength, 
             long threadCreationTimeWindowLength, 
             long numberParkingsThreshold,
             long numberThreadCreationsThreshold
         );
+        */
         void close();
         int getFactoryId() const;
         const long& addAndGetJavaLevelThreadId(long javaLevelThreadId);
@@ -32,7 +40,9 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
         void removeJavaLevelThreadId(long javaLevelThreadId);
         void recordThreadCreation();
         void recordParking();
+        /*
         bool shallCreateVirtualThread();
+        */
         long countParkings();
         long countThreadCreations();
         long countNumberThreads();

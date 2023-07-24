@@ -808,13 +808,26 @@ JVM_SetMonitorParameters(
     jobject adaptiveThreadFactory, 
     jint adaptiveThreadFactoryId, 
     jlong parkingTimeWindowLength, 
+    jlong threadCreationTimeWindowLength
+);
+
+/*
+JNIEXPORT void JNICALL
+JVM_SetMonitorParameters(
+    JNIEnv *env, 
+    jobject adaptiveThreadFactory, 
+    jint adaptiveThreadFactoryId, 
+    jlong parkingTimeWindowLength, 
     jlong threadCreationTimeWindowLength,
     jlong numberParkingsThreshold,
     jlong numberThreadCreationsThreshold
 );
+*/
 
+/*
 JNIEXPORT jboolean JNICALL
 JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId);
+*/
 
 JNIEXPORT void JNICALL
 JVM_RegisterWithMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId);

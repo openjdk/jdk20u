@@ -211,7 +211,7 @@ JVM_Yield
 JVM_AddMonitor
 JVM_RemoveMonitor
 JVM_SetMonitorParameters
-JVM_QueryMonitor
+# JVM_QueryMonitor
 JVM_RegisterWithMonitor
 JVM_DeregisterFromMonitor
 JVM_AssociateWithMonitor

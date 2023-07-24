@@ -15,6 +15,15 @@ AdaptiveThreadFactoryMonitor::AdaptiveThreadFactoryMonitor(int adaptiveThreadFac
 
 void AdaptiveThreadFactoryMonitor::setParameters(
     long parkingTimeWindowLength, 
+    long threadCreationTimeWindowLength
+) {
+    _parkingTimeWindowLength = parkingTimeWindowLength;
+    _threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+}
+
+/*
+void AdaptiveThreadFactoryMonitor::setParameters(
+    long parkingTimeWindowLength, 
     long threadCreationTimeWindowLength,
     long numberParkingsThreshold,
     long numberThreadCreationsThreshold
@@ -24,6 +33,7 @@ void AdaptiveThreadFactoryMonitor::setParameters(
     _numberParkingsThreshold = numberParkingsThreshold;
     _numberThreadCreationsThreshold = numberThreadCreationsThreshold;
 }
+*/
 
 void AdaptiveThreadFactoryMonitor::close() {
     _javaLevelThreadIds->clear();
@@ -73,12 +83,14 @@ long AdaptiveThreadFactoryMonitor::countNumberEventsInTimeWindow(SimpleConcurren
     return counter;
 }
 
+/*
 bool AdaptiveThreadFactoryMonitor::shallCreateVirtualThread() {
     long numberParkingsInTimeWindow = countParkings();
     long numberThreadCreationsInTimeWindow = countThreadCreations();
     bool decision = (_numberParkingsThreshold <= numberParkingsInTimeWindow) || (_numberThreadCreationsThreshold <= numberThreadCreationsInTimeWindow);
     return decision;
 }
+*/
 
 long AdaptiveThreadFactoryMonitor::countParkings() {
     return countNumberEventsInTimeWindow(_parkingTimes, _parkingTimeWindowLength);

@@ -20,11 +20,18 @@ class AdaptiveThreadFactoryMonitors : AllStatic {
         static void setMonitorParameters(
             int adaptiveThreadFactoryId, 
             long parkingTimeWindowLength, 
+            long threadCreationTimeWindowLength
+        );
+        /*
+        static void setMonitorParameters(
+            int adaptiveThreadFactoryId, 
+            long parkingTimeWindowLength, 
             long threadCreationTimeWindowLength,
             long numberParkingsThreshold,
             long numberThreadCreationsThreshold
         );
         static bool answerQuery(int adaptiveThreadFactoryId);
+        */
         static void registerWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);
         static void deregisterFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);
         static void associateWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId);

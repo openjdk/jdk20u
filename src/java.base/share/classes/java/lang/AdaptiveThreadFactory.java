@@ -5,8 +5,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.LinkedList;
 import java.util.Iterator;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+//import java.lang.management.ManagementFactory;
+//import com.sun.management.OperatingSystemMXBean;
 
 /**
  * Comment
@@ -26,15 +26,41 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         PLATFORM, VIRTUAL
     }
 
+    /**
+     * Comment
+     */
+    @FunctionalInterface
+    public interface Discriminator {
+        /**
+        * Comment 
+        * 
+        * @param   numberThreadCreationsInTimeWindow Comment
+        * @param   numberParkingsInTimeWindow Comment
+        * @param   cpuUsage Comment
+        * @param   numberThreads Comment
+        * @return Comment
+        */
+        boolean discriminate(
+            long numberThreadCreationsInTimeWindow,
+            long numberParkingsInTimeWindow,
+            double cpuUsage, 
+            int numberThreads
+        );
+    }
+
     // user specification
     private int adaptiveThreadFactoryId;
     private long parkingTimeWindowLength; // in milliseconds
     private long threadCreationTimeWindowLength; // in milliseconds
+    /*
     private long numberParkingsThreshold;
     private long numberThreadCreationsThreshold;
+    */
     private int stateQueryInterval; // in milliseconds
     private int numberRecurrencesUntilTransition;
     private Runnable threadCreationHandler;
+    private Discriminator discriminator;
+    //private OperatingSystemMXBean operatingSystemMXBean;
 
     // internal use
 
@@ -54,9 +80,79 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * @param   adaptiveThreadFactoryId Comment
      * @param   parkingTimeWindowLength Comment
      * @param   threadCreationTimeWindowLength Comment
+     * @param   discriminator Comment
+     */
+    public AdaptiveThreadFactory(
+        int adaptiveThreadFactoryId, 
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength,
+        Discriminator discriminator
+    ) {
+        // user specification
+        this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+        addMonitor(this.adaptiveThreadFactoryId);
+        setParameters(
+            parkingTimeWindowLength,
+            threadCreationTimeWindowLength
+        );
+        this.discriminator = discriminator;
+        //this.operatingSystemMXBean = (OperatingSystemMXBean)ManagementFactory.getOperatingSystemMXBean();
+        // internal use
+        this.platformThreadFactory = Thread.ofPlatform().factory();
+        this.virtualThreadFactory = Thread.ofVirtual().factory();
+        this.threads = new ConcurrentLinkedQueue<Thread>();
+        this.executionMode = ExecutionMode.HETEROGENEOUS;
+    }
+
+    /**
+     * Comment 
+     * 
+     * @param   adaptiveThreadFactoryId Comment
+     * @param   parkingTimeWindowLength Comment
+     * @param   threadCreationTimeWindowLength Comment
+     * @param   discriminator Comment
+     * @param   stateQueryInterval Comment
+     * @param   numberRecurrencesUntilTransition Comment
+     * @param   threadCreationHandler Comment 
+     */
+    public AdaptiveThreadFactory(
+        int adaptiveThreadFactoryId, 
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength,
+        Discriminator discriminator,
+        int stateQueryInterval,
+        int numberRecurrencesUntilTransition,
+        Runnable threadCreationHandler 
+    ) {
+        // user specification
+        this(
+            adaptiveThreadFactoryId,
+            parkingTimeWindowLength,
+            threadCreationTimeWindowLength,
+            discriminator
+        );
+        this.stateQueryInterval = stateQueryInterval;
+        this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
+        this.threadCreationHandler = threadCreationHandler;
+        // internal use
+        this.queryResults = new LinkedList<ThreadType>();
+        this.currentThreadType = ThreadType.PLATFORM;
+        this.executionMode = ExecutionMode.HOMOGENEOUS;
+        // start background thread
+        startTransitionManager();
+    }
+
+    
+    /**
+     * Comment 
+     * 
+     * @param   adaptiveThreadFactoryId Comment
+     * @param   parkingTimeWindowLength Comment
+     * @param   threadCreationTimeWindowLength Comment
      * @param   numberParkingsThreshold Comment
      * @param   numberThreadCreationsThreshold Comment
      */
+    /*
     public AdaptiveThreadFactory(
         int adaptiveThreadFactoryId, 
         long parkingTimeWindowLength, 
@@ -79,6 +175,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         this.threads = new ConcurrentLinkedQueue<Thread>();
         this.executionMode = ExecutionMode.HETEROGENEOUS;
     }
+    */
 
     /**
      * Comment 
@@ -92,6 +189,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * @param   numberRecurrencesUntilTransition Comment
      * @param   threadCreationHandler Comment 
      */
+    /*
     public AdaptiveThreadFactory(
         int adaptiveThreadFactoryId, 
         long parkingTimeWindowLength, 
@@ -120,6 +218,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         // start background thread
         startTransitionManager();
     }
+    */
 
     private boolean shallTransition(ThreadType newQueryResult) {
         this.queryResults.add(newQueryResult);
@@ -186,9 +285,29 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * 
      * @param   parkingTimeWindowLength Comment
      * @param   threadCreationTimeWindowLength Comment
+     */
+    public void setParameters(
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength
+    ) {
+        this.parkingTimeWindowLength = parkingTimeWindowLength;
+        this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+        setMonitorParameters(
+            this.adaptiveThreadFactoryId, 
+            this.parkingTimeWindowLength, 
+            this.threadCreationTimeWindowLength
+        );
+    }
+
+    /**
+     * Comment 
+     * 
+     * @param   parkingTimeWindowLength Comment
+     * @param   threadCreationTimeWindowLength Comment
      * @param   numberParkingsThreshold Comment
      * @param   numberThreadCreationsThreshold Comment
      */
+    /*
     public void setParameters(
         long parkingTimeWindowLength, 
         long threadCreationTimeWindowLength,
@@ -207,6 +326,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             this.numberThreadCreationsThreshold
         );
     }
+    */
 
     /**
      * Comment
@@ -251,6 +371,24 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private ThreadType queryMonitor() {
+        /*
+        final boolean useVirtualThread = this.discriminator.discriminate(
+            getNumberThreadCreationsInTimeWindow(),
+            getNumberParkingsInTimeWindow(),
+            operatingSystemMXBean.getProcessCpuLoad(),
+            getNumberThreads()
+        );
+        */
+       final boolean useVirtualThread = false;
+        if(useVirtualThread) {
+            return ThreadType.VIRTUAL;
+        } else {
+            return ThreadType.PLATFORM;
+        }
+    }
+
+    /*
+    private ThreadType queryMonitor() {
         final boolean useVirtualThread = queryMonitor(this.adaptiveThreadFactoryId);
         if(useVirtualThread) {
             return ThreadType.VIRTUAL;
@@ -258,6 +396,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             return ThreadType.PLATFORM;
         }
     }
+    */
 
     /*
      * Comment
@@ -305,11 +444,20 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     private native void setMonitorParameters(
         int adaptiveThreadFactoryId, 
         long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength
+    );
+    /*
+    private native void setMonitorParameters(
+        int adaptiveThreadFactoryId, 
+        long parkingTimeWindowLength, 
         long threadCreationTimeWindowLength,
         long numberParkingsThreshold,
         long numberThreadCreationsThreshold
     );
+    */
+    /*
     private native boolean queryMonitor(int adaptiveThreadFactoryId);
+    */
     static native void registerJavaThreadAndAssociateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
     static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
     static native void associateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
