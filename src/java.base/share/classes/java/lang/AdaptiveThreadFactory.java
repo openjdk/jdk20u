@@ -137,9 +137,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private void performTransition() {
-
-        System.out.println("TRANSITION START: " + System.currentTimeMillis());
-
         final int numberThreads = this.threads.size();
         int index = 0;
         Iterator<Thread> iterator = this.threads.iterator();
@@ -154,9 +151,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             this.threadCreationHandler.run();
             index += 1;
         }
-
-        System.out.println("TRANSITION END: " + System.currentTimeMillis());
-
     }
 
     private void startTransitionManager() {
