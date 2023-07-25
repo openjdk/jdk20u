@@ -97,9 +97,9 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         addMonitor(this.adaptiveThreadFactoryId);
         setParameters(
             parkingTimeWindowLength,
-            threadCreationTimeWindowLength
+            threadCreationTimeWindowLength,
+            discriminator
         );
-        this.discriminator = discriminator;
         this.cpuUsageProvider = cpuUsageProvider;
         // internal use
         this.platformThreadFactory = Thread.ofPlatform().factory();
@@ -292,13 +292,16 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * 
      * @param   parkingTimeWindowLength Comment
      * @param   threadCreationTimeWindowLength Comment
+     * @param   discriminator Comment
      */
     public void setParameters(
         long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength
+        long threadCreationTimeWindowLength,
+        Discriminator discriminator
     ) {
         this.parkingTimeWindowLength = parkingTimeWindowLength;
         this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+        this.discriminator = discriminator;
         setMonitorParameters(
             this.adaptiveThreadFactoryId, 
             this.parkingTimeWindowLength, 
