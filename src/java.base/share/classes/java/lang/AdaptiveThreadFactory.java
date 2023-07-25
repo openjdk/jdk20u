@@ -20,8 +20,12 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         HETEROGENEOUS, HOMOGENEOUS
     }
 
-    private enum ThreadType {
-        PLATFORM, VIRTUAL
+    /**
+    * Comment
+    */
+    public enum ThreadType {
+        /** Comment */ PLATFORM, 
+        /** Comment */ VIRTUAL
     }
 
     /**
@@ -38,7 +42,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         * @param   numberThreads Comment
         * @return Comment
         */
-        boolean discriminate(
+        ThreadType discriminate(
             long numberThreadCreationsInTimeWindow,
             long numberParkingsInTimeWindow,
             double cpuUsage, 
@@ -374,17 +378,12 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private ThreadType queryMonitor() {
-        final boolean useVirtualThread = this.discriminator.discriminate(
+        return this.discriminator.discriminate(
             getNumberThreadCreationsInTimeWindow(),
             getNumberParkingsInTimeWindow(),
             this.cpuUsageProvider.get(),
             getNumberThreads()
         );
-        if(useVirtualThread) {
-            return ThreadType.VIRTUAL;
-        } else {
-            return ThreadType.PLATFORM;
-        }
     }
 
     /*
