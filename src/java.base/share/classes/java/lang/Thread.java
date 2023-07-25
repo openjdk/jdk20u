@@ -3083,6 +3083,7 @@ public class Thread implements Runnable {
 
         public AdaptiveThreadFactoryAssociationInformation() {
             this.isAssociatedWithAdaptiveThreadFactory = false;
+            this.isInterrupted = false;
         }
 
         public AdaptiveThreadFactoryAssociationInformation(int adaptiveThreadFactoryId) {
@@ -3112,7 +3113,6 @@ public class Thread implements Runnable {
         }
 
         public boolean isInterrupted() {
-            checkAssociation();
             return this.isInterrupted;
         }
 
@@ -3148,7 +3148,7 @@ public class Thread implements Runnable {
      * Comment
      * @return Comment  
      */
-    public boolean isInterruptedByAdaptiveThreadFactory() throws UnsupportedOperationException {
+    public boolean isInterruptedByAdaptiveThreadFactory() {
         return this.adaptiveThreadFactoryAssociationInformation.isInterrupted();
     }
     
