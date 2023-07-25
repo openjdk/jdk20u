@@ -4,9 +4,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.LinkedList;
 import java.util.Iterator;
-
-//import java.lang.management.ManagementFactory;
-//import com.sun.management.OperatingSystemMXBean;
+import java.util.function.Supplier;
 
 /**
  * Comment
@@ -44,7 +42,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             long numberThreadCreationsInTimeWindow,
             long numberParkingsInTimeWindow,
             double cpuUsage, 
-            int numberThreads
+            long numberThreads
         );
     }
 
@@ -60,7 +58,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     private int numberRecurrencesUntilTransition;
     private Runnable threadCreationHandler;
     private Discriminator discriminator;
-    //private OperatingSystemMXBean operatingSystemMXBean;
+    private Supplier<Double> cpuUsageProvider;
 
     // internal use
 
@@ -81,12 +79,14 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * @param   parkingTimeWindowLength Comment
      * @param   threadCreationTimeWindowLength Comment
      * @param   discriminator Comment
+     * @param   cpuUsageProvider Comment
      */
     public AdaptiveThreadFactory(
         int adaptiveThreadFactoryId, 
         long parkingTimeWindowLength, 
         long threadCreationTimeWindowLength,
-        Discriminator discriminator
+        Discriminator discriminator,
+        Supplier<Double> cpuUsageProvider
     ) {
         // user specification
         this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
@@ -96,7 +96,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             threadCreationTimeWindowLength
         );
         this.discriminator = discriminator;
-        //this.operatingSystemMXBean = (OperatingSystemMXBean)ManagementFactory.getOperatingSystemMXBean();
+        this.cpuUsageProvider = cpuUsageProvider;
         // internal use
         this.platformThreadFactory = Thread.ofPlatform().factory();
         this.virtualThreadFactory = Thread.ofVirtual().factory();
@@ -111,6 +111,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * @param   parkingTimeWindowLength Comment
      * @param   threadCreationTimeWindowLength Comment
      * @param   discriminator Comment
+     * @param   cpuUsageProvider Comment
      * @param   stateQueryInterval Comment
      * @param   numberRecurrencesUntilTransition Comment
      * @param   threadCreationHandler Comment 
@@ -120,6 +121,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         long parkingTimeWindowLength, 
         long threadCreationTimeWindowLength,
         Discriminator discriminator,
+        Supplier<Double> cpuUsageProvider,
         int stateQueryInterval,
         int numberRecurrencesUntilTransition,
         Runnable threadCreationHandler 
@@ -129,7 +131,8 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             adaptiveThreadFactoryId,
             parkingTimeWindowLength,
             threadCreationTimeWindowLength,
-            discriminator
+            discriminator,
+            cpuUsageProvider
         );
         this.stateQueryInterval = stateQueryInterval;
         this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
@@ -371,15 +374,12 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private ThreadType queryMonitor() {
-        /*
         final boolean useVirtualThread = this.discriminator.discriminate(
             getNumberThreadCreationsInTimeWindow(),
             getNumberParkingsInTimeWindow(),
-            operatingSystemMXBean.getProcessCpuLoad(),
+            this.cpuUsageProvider.get(),
             getNumberThreads()
         );
-        */
-       final boolean useVirtualThread = false;
         if(useVirtualThread) {
             return ThreadType.VIRTUAL;
         } else {
