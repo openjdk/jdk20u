@@ -40,13 +40,15 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         * @param   numberParkingsInTimeWindow Comment
         * @param   cpuUsage Comment
         * @param   numberThreads Comment
+        * @param   currentThreadType Comment
         * @return Comment
         */
         ThreadType discriminate(
             long numberThreadCreationsInTimeWindow,
             long numberParkingsInTimeWindow,
             double cpuUsage, 
-            long numberThreads
+            long numberThreads,
+            ThreadType currentThreadType
         );
     }
 
@@ -381,12 +383,24 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private ThreadType queryMonitor() {
-        return this.discriminator.discriminate(
-            getNumberThreadCreationsInTimeWindow(),
-            getNumberParkingsInTimeWindow(),
-            this.cpuUsageProvider.get(),
-            getNumberThreads()
-        );
+        if(this.executionMode.equals(ExecutionMode.HETEROGENEOUS)) {
+            return this.discriminator.discriminate(
+                getNumberThreadCreationsInTimeWindow(),
+                getNumberParkingsInTimeWindow(),
+                this.cpuUsageProvider.get(),
+                getNumberThreads(),
+                null
+            ); 
+        }
+        else {
+            return this.discriminator.discriminate(
+                getNumberThreadCreationsInTimeWindow(),
+                getNumberParkingsInTimeWindow(),
+                this.cpuUsageProvider.get(),
+                getNumberThreads(),
+                this.currentThreadType
+            );
+        }
     }
 
     /*
