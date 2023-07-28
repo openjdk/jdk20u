@@ -2,9 +2,10 @@ package java.lang;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.LinkedList;
-import java.util.Iterator;
 import java.util.function.Supplier;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Optional;
 
 /**
  * Comment
@@ -48,7 +49,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             long numberParkingsInTimeWindow,
             double cpuUsage, 
             long numberThreads,
-            ThreadType currentThreadType
+            Optional<ThreadType> currentThreadType
         );
     }
 
@@ -62,7 +63,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     */
     private int stateQueryInterval; // in milliseconds
     private int numberRecurrencesUntilTransition;
-    private Runnable threadCreationHandler;
+    private Optional<Runnable> threadCreationHandler;
     private Discriminator discriminator;
     private Supplier<Double> cpuUsageProvider;
 
@@ -77,6 +78,13 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     private Thread transitionManager;
     private ThreadType currentThreadType;
     private LinkedList<ThreadType> queryResults;
+    private int maximalNumberTerminationAttempts;
+    private int threadTerminationWaitingTimeInMilliseconds;
+
+    private void setDefaultValues() {
+        this.maximalNumberTerminationAttempts = 10;
+        this.threadTerminationWaitingTimeInMilliseconds = 50;
+    }
 
     /**
      * Comment 
@@ -108,6 +116,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         this.virtualThreadFactory = Thread.ofVirtual().factory();
         this.threads = new ConcurrentLinkedQueue<Thread>();
         this.executionMode = ExecutionMode.HETEROGENEOUS;
+        setDefaultValues();
     }
 
     /**
@@ -119,8 +128,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * @param   discriminator Comment
      * @param   cpuUsageProvider Comment
      * @param   stateQueryInterval Comment
-     * @param   numberRecurrencesUntilTransition Comment
-     * @param   threadCreationHandler Comment 
+     * @param   numberRecurrencesUntilTransition Comment 
      */
     public AdaptiveThreadFactory(
         int adaptiveThreadFactoryId, 
@@ -129,8 +137,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         Discriminator discriminator,
         Supplier<Double> cpuUsageProvider,
         int stateQueryInterval,
-        int numberRecurrencesUntilTransition,
-        Runnable threadCreationHandler 
+        int numberRecurrencesUntilTransition 
     ) {
         // user specification
         this(
@@ -142,13 +149,48 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         );
         this.stateQueryInterval = stateQueryInterval;
         this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
-        this.threadCreationHandler = threadCreationHandler;
+        this.threadCreationHandler = Optional.empty();
         // internal use
         this.queryResults = new LinkedList<ThreadType>();
         this.currentThreadType = ThreadType.PLATFORM;
         this.executionMode = ExecutionMode.HOMOGENEOUS;
+        setDefaultValues();
         // start background thread
         startTransitionManager();
+    }
+
+    /**
+     * Comment 
+     * 
+     * @param   adaptiveThreadFactoryId Comment
+     * @param   parkingTimeWindowLength Comment
+     * @param   threadCreationTimeWindowLength Comment
+     * @param   discriminator Comment
+     * @param   cpuUsageProvider Comment
+     * @param   stateQueryInterval Comment
+     * @param   numberRecurrencesUntilTransition Comment 
+     * @param   threadCreationHandler Comment
+     */
+    public AdaptiveThreadFactory(
+        int adaptiveThreadFactoryId, 
+        long parkingTimeWindowLength, 
+        long threadCreationTimeWindowLength,
+        Discriminator discriminator,
+        Supplier<Double> cpuUsageProvider,
+        int stateQueryInterval,
+        int numberRecurrencesUntilTransition,
+        Runnable threadCreationHandler
+    ) {
+        this(
+            adaptiveThreadFactoryId,
+            parkingTimeWindowLength,
+            threadCreationTimeWindowLength,
+            discriminator,
+            cpuUsageProvider,
+            stateQueryInterval,
+            numberRecurrencesUntilTransition
+        );
+        this.threadCreationHandler = Optional.of(threadCreationHandler);
     }
 
     
@@ -245,19 +287,49 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
 
     private void performTransition() {
-        final int numberThreads = this.threads.size();
-        int index = 0;
+        LinkedList<Thread> busyThreads = new LinkedList<Thread>();
         Iterator<Thread> iterator = this.threads.iterator();
-        while(iterator.hasNext() && index < numberThreads) {
-            Thread thread = iterator.next();
-            thread.setAsInterruptedByAdaptiveThreadFactory();
+        while(iterator.hasNext()) {
+            Thread busyThread = iterator.next();
+            busyThreads.add(busyThread);
+        }
+        int terminationAttemptNumber = 0;
+        LinkedList<Thread> persistentBusyThreads = new LinkedList<Thread>();
+        for(final Thread busyThread : busyThreads) {
+            busyThread.setAsInterruptedByAdaptiveThreadFactory();
             try {
-                thread.join();
+                busyThread.join(this.threadTerminationWaitingTimeInMilliseconds);
             } catch(InterruptedException interruptedException) {
                 throw new RuntimeException(interruptedException.getMessage());
             }
-            this.threadCreationHandler.run();
-            index += 1;
+            if(busyThread.isAlive()) {
+                persistentBusyThreads.add(busyThread);
+            } else {
+                this.threadCreationHandler.ifPresent((Runnable runnable) -> runnable.run());
+            }
+        }
+        busyThreads = persistentBusyThreads;
+        persistentBusyThreads = new LinkedList<Thread>();
+        terminationAttemptNumber += 1;
+        while(
+            terminationAttemptNumber < this.maximalNumberTerminationAttempts &&
+            busyThreads.size() > 0
+        ) {
+            for(final Thread busyThread : busyThreads) {
+                try {
+                    busyThread.join(this.threadTerminationWaitingTimeInMilliseconds);
+                } catch(InterruptedException interruptedException) {
+                    throw new RuntimeException(interruptedException.getMessage());
+                }
+                if(busyThread.isAlive()) {
+                    persistentBusyThreads.add(busyThread);
+                } else {
+                    this.threadCreationHandler.ifPresent((Runnable runnable) -> runnable.run());
+                }
+            }
+            busyThreads = persistentBusyThreads;
+            persistentBusyThreads = new LinkedList<Thread>();
+            terminationAttemptNumber += 1;
         }
     }
 
@@ -389,7 +461,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
                 getNumberParkingsInTimeWindow(),
                 this.cpuUsageProvider.get(),
                 getNumberThreads(),
-                null
+                Optional.empty()
             ); 
         }
         else {
@@ -398,7 +470,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
                 getNumberParkingsInTimeWindow(),
                 this.cpuUsageProvider.get(),
                 getNumberThreads(),
-                this.currentThreadType
+                Optional.of(this.currentThreadType)
             );
         }
     }
