@@ -1,558 +1,744 @@
 package java.lang;
 
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Supplier;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.function.Supplier;
 
 /**
  * Comment
  */
 public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
-    private static native void registerNatives();
-    static {
-        registerNatives();
-    }
+  private static native void registerNatives();
 
-    private enum ExecutionMode {
-        HETEROGENEOUS, HOMOGENEOUS
-    }
+  static {
+    registerNatives();
+  }
 
-    /**
-    * Comment
-    */
-    public enum ThreadType {
-        /** Comment */ PLATFORM, 
-        /** Comment */ VIRTUAL
-    }
+  private enum ExecutionMode {
+    HETEROGENEOUS,
+    HOMOGENEOUS,
+  }
 
+  /**
+   * Comment
+   */
+  public enum ThreadType {
+    /** Comment */PLATFORM,
+    /** Comment */VIRTUAL,
+  }
+
+  /**
+   * Comment
+   */
+  @FunctionalInterface
+  public interface Discriminator {
     /**
      * Comment
+     *
+     * @param   numberThreadCreationsInTimeWindow Comment
+     * @param   numberParkingsInTimeWindow Comment
+     * @param   cpuUsage Comment
+     * @param   numberThreads Comment
+     * @param   currentThreadType Comment
+     * @return Comment
      */
-    @FunctionalInterface
-    public interface Discriminator {
-        /**
-        * Comment 
-        * 
-        * @param   numberThreadCreationsInTimeWindow Comment
-        * @param   numberParkingsInTimeWindow Comment
-        * @param   cpuUsage Comment
-        * @param   numberThreads Comment
-        * @param   currentThreadType Comment
-        * @return Comment
-        */
-        ThreadType discriminate(
-            long numberThreadCreationsInTimeWindow,
-            long numberParkingsInTimeWindow,
-            double cpuUsage, 
-            long numberThreads,
-            Optional<ThreadType> currentThreadType
-        );
-    }
+    ThreadType discriminate(
+      long numberThreadCreationsInTimeWindow,
+      long numberParkingsInTimeWindow,
+      long numberThreads,
+      Optional<Double> cpuUsage,
+      Optional<ThreadType> currentThreadType
+    );
+  }
 
-    // user specification
-    private int adaptiveThreadFactoryId;
-    private long parkingTimeWindowLength; // in milliseconds
-    private long threadCreationTimeWindowLength; // in milliseconds
-    /*
-    private long numberParkingsThreshold;
-    private long numberThreadCreationsThreshold;
-    */
-    private int stateQueryInterval; // in milliseconds
-    private int numberRecurrencesUntilTransition;
+  // user specification
+  private int adaptiveThreadFactoryId;
+  private long parkingTimeWindowLength; // in milliseconds
+  private long threadCreationTimeWindowLength; // in milliseconds
+  private Discriminator discriminator;
+  private Optional<Supplier<Double>> cpuUsageProvider;
+  private Optional<Integer> cpuUsageSamplingPeriod; // in milliseconds
+  private Optional<Integer> numberRelevantCpuUsageSamples;
+  private Optional<Integer> stateQueryInterval; // in milliseconds
+  private Optional<Integer> numberRecurrencesUntilTransition;
+  private Optional<Runnable> threadCreationHandler;
+
+  // internal use
+
+  private ExecutionMode executionMode;
+  private ThreadFactory platformThreadFactory;
+  private ThreadFactory virtualThreadFactory;
+  private ConcurrentLinkedQueue<Thread> threads;
+  private Thread cpuUsageSampler;
+  private ConcurrentLinkedQueue<Double> cpuUsageSamples;
+
+  // ExecutionMode.HOMOGENEOUS
+  private Thread transitionManager;
+  private ThreadType currentThreadType;
+  private LinkedList<ThreadType> queryResults;
+  private Integer maximalNumberTerminationAttempts;
+  private Integer threadTerminationWaitingTimeInMilliseconds;
+
+  /**
+   * Comment
+   */
+  public static class AdaptiveThreadFactoryBuilder {
+
+    private Optional<Integer> adaptiveThreadFactoryId;
+    private Optional<Long> parkingTimeWindowLength; // in milliseconds
+    private Optional<Long> threadCreationTimeWindowLength; // in milliseconds
+    private Optional<Discriminator> discriminator;
+    private Optional<Supplier<Double>> cpuUsageProvider;
+    private Optional<Integer> cpuUsageSamplingPeriod;
+    private Optional<Integer> numberRelevantCpuUsageSamples;
+    private Optional<Integer> stateQueryInterval; // in milliseconds
+    private Optional<Integer> numberRecurrencesUntilTransition;
     private Optional<Runnable> threadCreationHandler;
-    private Discriminator discriminator;
-    private Supplier<Double> cpuUsageProvider;
 
-    // internal use
-
-    private ExecutionMode executionMode;
-    private ThreadFactory platformThreadFactory;
-    private ThreadFactory virtualThreadFactory;
-    private final ConcurrentLinkedQueue<Thread> threads;
-
-    // ExecutionMode.HOMOGENEOUS
-    private Thread transitionManager;
-    private ThreadType currentThreadType;
-    private LinkedList<ThreadType> queryResults;
-    private int maximalNumberTerminationAttempts;
-    private int threadTerminationWaitingTimeInMilliseconds;
-
-    private void setDefaultValues() {
-        this.maximalNumberTerminationAttempts = 10;
-        this.threadTerminationWaitingTimeInMilliseconds = 50;
+    /**
+     * Comment
+     */
+    public AdaptiveThreadFactoryBuilder() {
+      this.adaptiveThreadFactoryId = Optional.empty();
+      this.parkingTimeWindowLength = Optional.empty();
+      this.threadCreationTimeWindowLength = Optional.empty();
+      this.discriminator = Optional.empty();
+      this.cpuUsageProvider = Optional.empty();
+      this.cpuUsageSamplingPeriod = Optional.empty();
+      this.numberRelevantCpuUsageSamples = Optional.empty();
+      this.stateQueryInterval = Optional.empty();
+      this.numberRecurrencesUntilTransition = Optional.empty();
+      this.threadCreationHandler = Optional.empty();
     }
 
     /**
-     * Comment 
-     * 
-     * @param   adaptiveThreadFactoryId Comment
-     * @param   parkingTimeWindowLength Comment
-     * @param   threadCreationTimeWindowLength Comment
-     * @param   discriminator Comment
-     * @param   cpuUsageProvider Comment
+     * Comment
+     *
+     * @param adaptiveThreadFactoryId Comment
+     * @return Comment
      */
-    public AdaptiveThreadFactory(
-        int adaptiveThreadFactoryId, 
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        Discriminator discriminator,
-        Supplier<Double> cpuUsageProvider
+    public AdaptiveThreadFactoryBuilder setAdaptiveThreadFactoryId(
+      int adaptiveThreadFactoryId
     ) {
-        // user specification
-        this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
-        addMonitor(this.adaptiveThreadFactoryId);
-        setParameters(
-            parkingTimeWindowLength,
-            threadCreationTimeWindowLength,
-            discriminator
-        );
-        this.cpuUsageProvider = cpuUsageProvider;
-        // internal use
-        this.platformThreadFactory = Thread.ofPlatform().factory();
-        this.virtualThreadFactory = Thread.ofVirtual().factory();
-        this.threads = new ConcurrentLinkedQueue<Thread>();
-        this.executionMode = ExecutionMode.HETEROGENEOUS;
-        setDefaultValues();
+      this.adaptiveThreadFactoryId = Optional.of(adaptiveThreadFactoryId);
+      return this;
     }
 
     /**
-     * Comment 
-     * 
-     * @param   adaptiveThreadFactoryId Comment
-     * @param   parkingTimeWindowLength Comment
-     * @param   threadCreationTimeWindowLength Comment
-     * @param   discriminator Comment
-     * @param   cpuUsageProvider Comment
-     * @param   stateQueryInterval Comment
-     * @param   numberRecurrencesUntilTransition Comment 
+     * Comment
+     *
+     * @param parkingTimeWindowLength Comment
+     * @return Comment
      */
-    public AdaptiveThreadFactory(
-        int adaptiveThreadFactoryId, 
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        Discriminator discriminator,
-        Supplier<Double> cpuUsageProvider,
-        int stateQueryInterval,
-        int numberRecurrencesUntilTransition 
+    public AdaptiveThreadFactoryBuilder setParkingTimeWindowLength(
+      long parkingTimeWindowLength
     ) {
-        // user specification
-        this(
-            adaptiveThreadFactoryId,
-            parkingTimeWindowLength,
-            threadCreationTimeWindowLength,
-            discriminator,
-            cpuUsageProvider
-        );
-        this.stateQueryInterval = stateQueryInterval;
-        this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
-        this.threadCreationHandler = Optional.empty();
-        // internal use
-        this.queryResults = new LinkedList<ThreadType>();
-        this.currentThreadType = ThreadType.PLATFORM;
-        this.executionMode = ExecutionMode.HOMOGENEOUS;
-        setDefaultValues();
-        // start background thread
-        startTransitionManager();
+      this.parkingTimeWindowLength = Optional.of(parkingTimeWindowLength);
+      return this;
     }
 
     /**
-     * Comment 
-     * 
-     * @param   adaptiveThreadFactoryId Comment
-     * @param   parkingTimeWindowLength Comment
-     * @param   threadCreationTimeWindowLength Comment
-     * @param   discriminator Comment
-     * @param   cpuUsageProvider Comment
-     * @param   stateQueryInterval Comment
-     * @param   numberRecurrencesUntilTransition Comment 
-     * @param   threadCreationHandler Comment
+     * Comment
+     *
+     * @param threadCreationTimeWindowLength Comment
+     * @return Comment
      */
-    public AdaptiveThreadFactory(
-        int adaptiveThreadFactoryId, 
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        Discriminator discriminator,
-        Supplier<Double> cpuUsageProvider,
-        int stateQueryInterval,
-        int numberRecurrencesUntilTransition,
-        Runnable threadCreationHandler
+    public AdaptiveThreadFactoryBuilder setThreadCreationTimeWindowLength(
+      long threadCreationTimeWindowLength
     ) {
-        this(
-            adaptiveThreadFactoryId,
-            parkingTimeWindowLength,
-            threadCreationTimeWindowLength,
-            discriminator,
-            cpuUsageProvider,
-            stateQueryInterval,
-            numberRecurrencesUntilTransition
-        );
-        this.threadCreationHandler = Optional.of(threadCreationHandler);
+      this.threadCreationTimeWindowLength =
+        Optional.of(threadCreationTimeWindowLength);
+      return this;
     }
-
-    
-    /**
-     * Comment 
-     * 
-     * @param   adaptiveThreadFactoryId Comment
-     * @param   parkingTimeWindowLength Comment
-     * @param   threadCreationTimeWindowLength Comment
-     * @param   numberParkingsThreshold Comment
-     * @param   numberThreadCreationsThreshold Comment
-     */
-    /*
-    public AdaptiveThreadFactory(
-        int adaptiveThreadFactoryId, 
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        long numberParkingsThreshold,
-        long numberThreadCreationsThreshold
-    ) {
-        // user specification
-        this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
-        addMonitor(this.adaptiveThreadFactoryId);
-        setParameters(
-            parkingTimeWindowLength,
-            threadCreationTimeWindowLength,
-            numberParkingsThreshold,
-            numberThreadCreationsThreshold
-        );
-        // internal use
-        this.platformThreadFactory = Thread.ofPlatform().factory();
-        this.virtualThreadFactory = Thread.ofVirtual().factory();
-        this.threads = new ConcurrentLinkedQueue<Thread>();
-        this.executionMode = ExecutionMode.HETEROGENEOUS;
-    }
-    */
 
     /**
-     * Comment 
-     * 
-     * @param   adaptiveThreadFactoryId Comment
-     * @param   parkingTimeWindowLength Comment
-     * @param   threadCreationTimeWindowLength Comment
-     * @param   numberParkingsThreshold Comment
-     * @param   numberThreadCreationsThreshold Comment
-     * @param   stateQueryInterval Comment
-     * @param   numberRecurrencesUntilTransition Comment
-     * @param   threadCreationHandler Comment 
+     * Comment
+     *
+     * @param discriminator Comment
+     * @return Comment
      */
-    /*
-    public AdaptiveThreadFactory(
-        int adaptiveThreadFactoryId, 
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        long numberParkingsThreshold,
-        long numberThreadCreationsThreshold,
-        int stateQueryInterval,
-        int numberRecurrencesUntilTransition,
-        Runnable threadCreationHandler 
+    public AdaptiveThreadFactoryBuilder setDiscriminator(
+      Discriminator discriminator
     ) {
-        // user specification
-        this(
-            adaptiveThreadFactoryId,
-            parkingTimeWindowLength,
-            threadCreationTimeWindowLength,
-            numberParkingsThreshold,
-            numberThreadCreationsThreshold
-        );
-        this.stateQueryInterval = stateQueryInterval;
-        this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
-        this.threadCreationHandler = threadCreationHandler;
-        // internal use
-        this.queryResults = new LinkedList<ThreadType>();
-        this.currentThreadType = ThreadType.PLATFORM;
-        this.executionMode = ExecutionMode.HOMOGENEOUS;
-        // start background thread
-        startTransitionManager();
-    }
-    */
-
-    private boolean shallTransition(ThreadType newQueryResult) {
-        this.queryResults.add(newQueryResult);
-        if(queryResults.size() > this.numberRecurrencesUntilTransition) {
-            queryResults.poll();
-        }
-        final boolean identicalQueryResults = this.queryResults.stream().distinct().count() == 1;
-        if(identicalQueryResults) {
-            if(!newQueryResult.equals(this.currentThreadType)) {
-                this.currentThreadType = newQueryResult;
-                return true;
-            }
-        }
-        return false;
+      this.discriminator = Optional.of(discriminator);
+      return this;
     }
 
-    private void performTransition() {
-        LinkedList<Thread> busyThreads = new LinkedList<Thread>();
-        Iterator<Thread> iterator = this.threads.iterator();
-        while(iterator.hasNext()) {
-            Thread busyThread = iterator.next();
-            busyThreads.add(busyThread);
-        }
-        int terminationAttemptNumber = 0;
-        LinkedList<Thread> persistentBusyThreads = new LinkedList<Thread>();
-        for(final Thread busyThread : busyThreads) {
-            busyThread.setAsInterruptedByAdaptiveThreadFactory();
-            try {
-                busyThread.join(this.threadTerminationWaitingTimeInMilliseconds);
-            } catch(InterruptedException interruptedException) {
-                throw new RuntimeException(interruptedException.getMessage());
-            }
-            if(busyThread.isAlive()) {
-                persistentBusyThreads.add(busyThread);
-            } else {
-                this.threadCreationHandler.ifPresent((Runnable runnable) -> runnable.run());
-            }
-        }
-        busyThreads = persistentBusyThreads;
-        persistentBusyThreads = new LinkedList<Thread>();
-        terminationAttemptNumber += 1;
-        while(
-            terminationAttemptNumber < this.maximalNumberTerminationAttempts &&
-            busyThreads.size() > 0
-        ) {
-            for(final Thread busyThread : busyThreads) {
-                try {
-                    busyThread.join(this.threadTerminationWaitingTimeInMilliseconds);
-                } catch(InterruptedException interruptedException) {
-                    throw new RuntimeException(interruptedException.getMessage());
-                }
-                if(busyThread.isAlive()) {
-                    persistentBusyThreads.add(busyThread);
-                } else {
-                    this.threadCreationHandler.ifPresent((Runnable runnable) -> runnable.run());
-                }
-            }
-            busyThreads = persistentBusyThreads;
-            persistentBusyThreads = new LinkedList<Thread>();
-            terminationAttemptNumber += 1;
-        }
+    /**
+     * Comment
+     *
+     * @param cpuUsageProvider Comment
+     * @return Comment
+     */
+    public AdaptiveThreadFactoryBuilder setCpuUsageProvider(
+      Supplier<Double> cpuUsageProvider
+    ) {
+      this.cpuUsageProvider = Optional.of(cpuUsageProvider);
+      return this;
     }
 
-    private void startTransitionManager() {
-        this.transitionManager = new Thread(() -> {
-            while(!Thread.currentThread().isInterrupted()) {
-                final ThreadType newQueryResult = queryMonitor();
-                final boolean shallTransition = shallTransition(newQueryResult);
-                if(shallTransition) {
-                    performTransition();
-                }
-                try {
-                    Thread.sleep(this.stateQueryInterval);
-                } catch(InterruptedException interruptedException) {
-                    return;
-                }
-            }
-        });
-        this.transitionManager.setDaemon(true);
-        this.transitionManager.start();
+    /**
+     * Comment
+     *
+     * @param cpuUsageSamplingPeriod Comment
+     * @return Comment
+     */
+    public AdaptiveThreadFactoryBuilder setCpuUsageSamplingPeriod(
+      int cpuUsageSamplingPeriod
+    ) {
+      this.cpuUsageSamplingPeriod = Optional.of(cpuUsageSamplingPeriod);
+      return this;
     }
 
-    private void stopTransitionManager() {
-        this.transitionManager.interrupt();
+    /**
+     * Comment
+     *
+     * @param numberRelevantCpuUsageSamples Comment
+     * @return Comment
+     */
+    public AdaptiveThreadFactoryBuilder setNumberRelevantCpuUsageSamples(
+      int numberRelevantCpuUsageSamples
+    ) {
+      this.numberRelevantCpuUsageSamples =
+        Optional.of(numberRelevantCpuUsageSamples);
+      return this;
+    }
+
+    /**
+     * Comment
+     *
+     * @param stateQueryInterval Comment
+     * @return Comment
+     */
+    public AdaptiveThreadFactoryBuilder setStateQueryInterval(
+      int stateQueryInterval
+    ) {
+      this.stateQueryInterval = Optional.of(stateQueryInterval);
+      return this;
+    }
+
+    /**
+     * Comment
+     *
+     * @param numberRecurrencesUntilTransition Comment
+     * @return Comment
+     */
+    public AdaptiveThreadFactoryBuilder setNumberRecurrencesUntilTransition(
+      int numberRecurrencesUntilTransition
+    ) {
+      this.numberRecurrencesUntilTransition =
+        Optional.of(numberRecurrencesUntilTransition);
+      return this;
+    }
+
+    /**
+     * Comment
+     *
+     * @param threadCreationHandler Comment
+     * @return Comment
+     */
+    public AdaptiveThreadFactoryBuilder setThreadCreationHandler(
+      Runnable threadCreationHandler
+    ) {
+      this.threadCreationHandler = Optional.of(threadCreationHandler);
+      return this;
+    }
+
+    /**
+     * Comment
+     *
+     * @return Comment
+     */
+    public AdaptiveThreadFactory build() {
+      AdaptiveThreadFactory adaptiveThreadFactory = new AdaptiveThreadFactory(
+        this.adaptiveThreadFactoryId.get(),
+        this.parkingTimeWindowLength.get(),
+        this.threadCreationTimeWindowLength.get(),
+        this.discriminator.get(),
+        this.cpuUsageProvider,
+        this.cpuUsageSamplingPeriod,
+        this.numberRelevantCpuUsageSamples,
+        this.stateQueryInterval,
+        this.numberRecurrencesUntilTransition,
+        this.threadCreationHandler
+      );
+      return adaptiveThreadFactory;
+    }
+  }
+
+  private class UserSpecificationRequirement {
+
+    private boolean condition;
+    private String message;
+
+    public UserSpecificationRequirement setCondition(boolean condition) {
+      this.condition = condition;
+      return this;
+    }
+
+    public UserSpecificationRequirement setMessage(String message) {
+      this.message = message;
+      return this;
+    }
+
+    public void check() {
+      if (!this.condition) {
+        throw new IllegalArgumentException(this.message);
+      }
+    }
+  }
+
+  private void validateUserSpecification() {
+    LinkedList<UserSpecificationRequirement> requirements = new LinkedList<UserSpecificationRequirement>();
+    requirements.add(
+      new UserSpecificationRequirement()
+        .setCondition(
+          (
+            this.cpuUsageProvider.isPresent() &&
+            this.cpuUsageSamplingPeriod.isPresent() &&
+            this.numberRelevantCpuUsageSamples.isPresent()
+          ) ||
+          (
+            this.cpuUsageProvider.isEmpty() &&
+            this.cpuUsageSamplingPeriod.isEmpty() &&
+            this.numberRelevantCpuUsageSamples.isEmpty()
+          )
+        )
+        .setMessage(
+          "Either all or none of the parameters {cpuUsageProvider, cpuUsageSamplingPeriod, numberRelevantCpuUsageSamples} must be set."
+        )
+    );
+    requirements.add(
+      new UserSpecificationRequirement()
+        .setCondition(
+          (
+            this.stateQueryInterval.isPresent() &&
+            this.numberRecurrencesUntilTransition.isPresent()
+          ) ||
+          (
+            this.stateQueryInterval.isEmpty() &&
+            this.numberRecurrencesUntilTransition.isEmpty()
+          )
+        )
+        .setMessage(
+          "Either all or none of the parameters {stateQueryInterval, numberRecurrencesUntilTransition} must be set."
+        )
+    );
+    for (final UserSpecificationRequirement requirement : requirements) {
+      requirement.check();
+    }
+  }
+
+  private boolean cpuUsageInEffect() {
+    final boolean cpuUsageInEffect =
+      this.cpuUsageProvider.isPresent() &&
+      this.cpuUsageSamplingPeriod.isPresent() &&
+      this.numberRelevantCpuUsageSamples.isPresent();
+    return cpuUsageInEffect;
+  }
+
+  private boolean homogeneousExecutionModeInEffect() {
+    final boolean homogeneousExecutionModeInEffect =
+      this.stateQueryInterval.isPresent() &&
+      this.numberRecurrencesUntilTransition.isPresent();
+    return homogeneousExecutionModeInEffect;
+  }
+
+  private void setDefaultValues() {
+    this.maximalNumberTerminationAttempts = 10;
+    this.threadTerminationWaitingTimeInMilliseconds = 50;
+  }
+
+  private void startPeriodicallyActiveThreads() {
+    if (cpuUsageInEffect()) {
+      startCpuUsageSampler();
+    }
+    if (homogeneousExecutionModeInEffect()) {
+      startTransitionManager();
+    }
+  }
+
+  private void initialise() {
+    this.platformThreadFactory = Thread.ofPlatform().factory();
+    this.virtualThreadFactory = Thread.ofVirtual().factory();
+    this.threads = new ConcurrentLinkedQueue<Thread>();
+    if (cpuUsageInEffect()) {
+      this.cpuUsageSamples = new ConcurrentLinkedQueue<Double>();
+    }
+    if (homogeneousExecutionModeInEffect()) {
+      this.executionMode = ExecutionMode.HOMOGENEOUS;
+      this.queryResults = new LinkedList<ThreadType>();
+      this.currentThreadType = ThreadType.PLATFORM;
+    } else {
+      this.executionMode = ExecutionMode.HETEROGENEOUS;
+    }
+    setDefaultValues();
+    startPeriodicallyActiveThreads();
+  }
+
+  /**
+   * Comment
+   *
+   * @param   adaptiveThreadFactoryId Comment
+   * @param   parkingTimeWindowLength Comment
+   * @param   threadCreationTimeWindowLength Comment
+   * @param   discriminator Comment
+   * @param   cpuUsageProvider Comment
+   * @param   cpuUsageSamplingPeriod Comment
+   * @param   numberRelevantCpuUsageSamples Comment
+   * @param   stateQueryInterval Comment
+   * @param   numberRecurrencesUntilTransition Comment
+   * @param   threadCreationHandler Comment
+   */
+  public AdaptiveThreadFactory(
+    int adaptiveThreadFactoryId,
+    long parkingTimeWindowLength,
+    long threadCreationTimeWindowLength,
+    Discriminator discriminator,
+    Optional<Supplier<Double>> cpuUsageProvider,
+    Optional<Integer> cpuUsageSamplingPeriod,
+    Optional<Integer> numberRelevantCpuUsageSamples,
+    Optional<Integer> stateQueryInterval,
+    Optional<Integer> numberRecurrencesUntilTransition,
+    Optional<Runnable> threadCreationHandler
+  ) {
+    this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+    this.parkingTimeWindowLength = parkingTimeWindowLength;
+    this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+    this.discriminator = discriminator;
+    this.cpuUsageProvider = cpuUsageProvider;
+    this.cpuUsageSamplingPeriod = cpuUsageSamplingPeriod;
+    this.numberRelevantCpuUsageSamples = numberRelevantCpuUsageSamples;
+    this.stateQueryInterval = stateQueryInterval;
+    this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
+    this.threadCreationHandler = threadCreationHandler;
+    validateUserSpecification();
+    addMonitor(this.adaptiveThreadFactoryId);
+    setMonitorParameters(
+      this.adaptiveThreadFactoryId,
+      this.parkingTimeWindowLength,
+      this.threadCreationTimeWindowLength
+    );
+    initialise();
+  }
+
+  private boolean shallTransition(ThreadType newQueryResult) {
+    this.queryResults.add(newQueryResult);
+    if (queryResults.size() > this.numberRecurrencesUntilTransition.get()) {
+      queryResults.poll();
+    }
+    final boolean identicalQueryResults =
+      this.queryResults.stream().distinct().count() == 1;
+    if (identicalQueryResults) {
+      if (!newQueryResult.equals(this.currentThreadType)) {
+        this.currentThreadType = newQueryResult;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void performTransition() {
+    LinkedList<Thread> busyThreads = new LinkedList<Thread>();
+    Iterator<Thread> iterator = this.threads.iterator();
+    while (iterator.hasNext()) {
+      Thread busyThread = iterator.next();
+      busyThreads.add(busyThread);
+    }
+    int terminationAttemptNumber = 0;
+    LinkedList<Thread> persistentBusyThreads = new LinkedList<Thread>();
+    for (final Thread busyThread : busyThreads) {
+      busyThread.setAsInterruptedByAdaptiveThreadFactory();
+      try {
+        busyThread.join(this.threadTerminationWaitingTimeInMilliseconds);
+      } catch (InterruptedException interruptedException) {
+        throw new RuntimeException(interruptedException.getMessage());
+      }
+      if (busyThread.isAlive()) {
+        persistentBusyThreads.add(busyThread);
+      } else {
+        this.threadCreationHandler.ifPresent((Runnable runnable) ->
+            runnable.run()
+          );
+      }
+    }
+    busyThreads = persistentBusyThreads;
+    persistentBusyThreads = new LinkedList<Thread>();
+    terminationAttemptNumber += 1;
+    while (
+      terminationAttemptNumber < this.maximalNumberTerminationAttempts &&
+      busyThreads.size() > 0
+    ) {
+      for (final Thread busyThread : busyThreads) {
         try {
-            this.transitionManager.join();
-        } catch(InterruptedException interruptedException) {
-            throw new RuntimeException(interruptedException.getMessage());
+          busyThread.join(this.threadTerminationWaitingTimeInMilliseconds);
+        } catch (InterruptedException interruptedException) {
+          throw new RuntimeException(interruptedException.getMessage());
         }
-    }
-
-    /**
-     * Comment 
-     * 
-     * @param   parkingTimeWindowLength Comment
-     * @param   threadCreationTimeWindowLength Comment
-     * @param   discriminator Comment
-     */
-    public void setParameters(
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        Discriminator discriminator
-    ) {
-        this.parkingTimeWindowLength = parkingTimeWindowLength;
-        this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
-        this.discriminator = discriminator;
-        setMonitorParameters(
-            this.adaptiveThreadFactoryId, 
-            this.parkingTimeWindowLength, 
-            this.threadCreationTimeWindowLength
-        );
-    }
-
-    /**
-     * Comment 
-     * 
-     * @param   parkingTimeWindowLength Comment
-     * @param   threadCreationTimeWindowLength Comment
-     * @param   numberParkingsThreshold Comment
-     * @param   numberThreadCreationsThreshold Comment
-     */
-    /*
-    public void setParameters(
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        long numberParkingsThreshold,
-        long numberThreadCreationsThreshold
-    ) {
-        this.parkingTimeWindowLength = parkingTimeWindowLength;
-        this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
-        this.numberParkingsThreshold = numberParkingsThreshold;
-        this.numberThreadCreationsThreshold = numberThreadCreationsThreshold;
-        setMonitorParameters(
-            this.adaptiveThreadFactoryId, 
-            this.parkingTimeWindowLength, 
-            this.threadCreationTimeWindowLength,
-            this.numberParkingsThreshold,
-            this.numberThreadCreationsThreshold
-        );
-    }
-    */
-
-    /**
-     * Comment
-     * @return Comment
-     */
-    public Thread newThread(Runnable originalTask) {
-        final Runnable augmentedTask = augmentTask(originalTask);
-        Thread newThread;
-        if(executionMode.equals(ExecutionMode.HETEROGENEOUS)) {
-            final ThreadType newQueryResult = queryMonitor();
-            if(newQueryResult.equals(ThreadType.PLATFORM)) {
-                newThread = platformThreadFactory.newThread(augmentedTask);
-            } else {
-                newThread = virtualThreadFactory.newThread(augmentedTask);
-            }
+        if (busyThread.isAlive()) {
+          persistentBusyThreads.add(busyThread);
         } else {
-            if(this.currentThreadType.equals(ThreadType.PLATFORM)) {
-                newThread = platformThreadFactory.newThread(augmentedTask);
-            } else {
-                newThread = virtualThreadFactory.newThread(augmentedTask);
-            }
-        }
-        newThread.associateWithAdaptiveThreadFactory(this.adaptiveThreadFactoryId);
-        threads.add(newThread);
-        return newThread;
-    }
-
-    private Runnable augmentTask(Runnable originalTask) {
-        final Runnable augmentedTask = () -> {
-            registerJavaThreadAndAssociateOSThreadWithMonitor(
-                Thread.currentThread().getAdaptiveThreadFactoryId(), 
-                Thread.currentThread().threadId()
-            );
-            originalTask.run();
-            deregisterJavaThreadAndDisassociateOSThreadFromMonitor(
-                Thread.currentThread().getAdaptiveThreadFactoryId(), 
-                Thread.currentThread().threadId() 
-            );
-            this.threads.remove(Thread.currentThread());
-        };
-        return augmentedTask;
-    }
-
-    private ThreadType queryMonitor() {
-        if(this.executionMode.equals(ExecutionMode.HETEROGENEOUS)) {
-            return this.discriminator.discriminate(
-                getNumberThreadCreationsInTimeWindow(),
-                getNumberParkingsInTimeWindow(),
-                this.cpuUsageProvider.get(),
-                getNumberThreads(),
-                Optional.empty()
-            ); 
-        }
-        else {
-            return this.discriminator.discriminate(
-                getNumberThreadCreationsInTimeWindow(),
-                getNumberParkingsInTimeWindow(),
-                this.cpuUsageProvider.get(),
-                getNumberThreads(),
-                Optional.of(this.currentThreadType)
+          this.threadCreationHandler.ifPresent((Runnable runnable) ->
+              runnable.run()
             );
         }
+      }
+      busyThreads = persistentBusyThreads;
+      persistentBusyThreads = new LinkedList<Thread>();
+      terminationAttemptNumber += 1;
     }
+  }
 
-    /*
-    private ThreadType queryMonitor() {
-        final boolean useVirtualThread = queryMonitor(this.adaptiveThreadFactoryId);
-        if(useVirtualThread) {
-            return ThreadType.VIRTUAL;
-        } else {
-            return ThreadType.PLATFORM;
+  private void startTransitionManager() {
+    this.transitionManager =
+      new Thread(() -> {
+        while (!Thread.currentThread().isInterrupted()) {
+          final ThreadType newQueryResult = queryMonitor();
+          final boolean shallTransition = shallTransition(newQueryResult);
+          if (shallTransition) {
+            performTransition();
+          }
+          try {
+            Thread.sleep(this.stateQueryInterval.get());
+          } catch (InterruptedException interruptedException) {
+            return;
+          }
         }
-    }
-    */
+      });
+    this.transitionManager.setDaemon(true);
+    this.transitionManager.start();
+  }
 
-    /*
-     * Comment
-     */
-    public void close() {
-        if(this.executionMode.equals(ExecutionMode.HOMOGENEOUS)) {
-            stopTransitionManager();
+  private void stopTransitionManager() {
+    this.transitionManager.interrupt();
+    try {
+      this.transitionManager.join();
+    } catch (InterruptedException interruptedException) {
+      throw new RuntimeException(interruptedException.getMessage());
+    }
+  }
+
+  private void startCpuUsageSampler() {
+    this.cpuUsageSampler =
+      new Thread(() -> {
+        while (!Thread.currentThread().isInterrupted()) {
+          final double cpuUsageSample = this.cpuUsageProvider.get().get();
+          this.cpuUsageSamples.add(cpuUsageSample);
+          if (
+            this.cpuUsageSamples.size() >
+            this.numberRelevantCpuUsageSamples.get()
+          ) {
+            this.cpuUsageSamples.poll();
+          }
+          try {
+            Thread.sleep(this.cpuUsageSamplingPeriod.get());
+          } catch (InterruptedException interruptedException) {
+            return;
+          }
         }
-        removeMonitor(this.adaptiveThreadFactoryId);
+      });
+    this.cpuUsageSampler.setDaemon(true);
+    this.cpuUsageSampler.start();
+  }
+
+  private void stopCpuUsageSampler() {
+    this.cpuUsageSampler.interrupt();
+    try {
+      this.cpuUsageSampler.join();
+    } catch (InterruptedException interruptedException) {
+      throw new RuntimeException(interruptedException.getMessage());
     }
+  }
 
-    /* Methods for testing */
-
-    /**
-     * Comment
-     * @return Comment
-     */
-    public long getNumberParkingsInTimeWindow() {
-        long numberParkingsInTimeWindow = countParkingsInTimeWindow(this.adaptiveThreadFactoryId);
-        return numberParkingsInTimeWindow;
+  /**
+   * Comment
+   * @return Comment
+   */
+  public Thread newThread(Runnable originalTask) {
+    final Runnable augmentedTask = augmentTask(originalTask);
+    Thread newThread;
+    if (executionMode.equals(ExecutionMode.HETEROGENEOUS)) {
+      final ThreadType newQueryResult = queryMonitor();
+      if (newQueryResult.equals(ThreadType.PLATFORM)) {
+        newThread = platformThreadFactory.newThread(augmentedTask);
+      } else {
+        newThread = virtualThreadFactory.newThread(augmentedTask);
+      }
+    } else {
+      if (this.currentThreadType.equals(ThreadType.PLATFORM)) {
+        newThread = platformThreadFactory.newThread(augmentedTask);
+      } else {
+        newThread = virtualThreadFactory.newThread(augmentedTask);
+      }
     }
+    newThread.associateWithAdaptiveThreadFactory(this.adaptiveThreadFactoryId);
+    threads.add(newThread);
+    return newThread;
+  }
 
-    /**
-     * Comment
-     * @return Comment
-     */
-    public long getNumberThreadCreationsInTimeWindow() {
-        long numberThreadCreationsInTimeWindow = countThreadCreationsInTimeWindow(this.adaptiveThreadFactoryId);
-        return numberThreadCreationsInTimeWindow;
+  private Runnable augmentTask(Runnable originalTask) {
+    final Runnable augmentedTask = () -> {
+      registerJavaThreadAndAssociateOSThreadWithMonitor(
+        Thread.currentThread().getAdaptiveThreadFactoryId(),
+        Thread.currentThread().threadId()
+      );
+      originalTask.run();
+      deregisterJavaThreadAndDisassociateOSThreadFromMonitor(
+        Thread.currentThread().getAdaptiveThreadFactoryId(),
+        Thread.currentThread().threadId()
+      );
+      this.threads.remove(Thread.currentThread());
+    };
+    return augmentedTask;
+  }
+
+  private ThreadType queryMonitor() {
+    Optional<Double> averageCpuUsage;
+    if (this.cpuUsageProvider.isPresent()) {
+      averageCpuUsage = Optional.of(computeAverageCpuUsage());
+    } else {
+      averageCpuUsage = Optional.empty();
     }
-
-    /**
-     * Comment
-     * @return Comment
-     */
-    public long getNumberThreads() {
-        long numberThreads = countNumberThreads(this.adaptiveThreadFactoryId);
-        return numberThreads;
+    Optional<ThreadType> currentFactoryThreadType;
+    if (this.executionMode.equals(ExecutionMode.HOMOGENEOUS)) {
+      currentFactoryThreadType = Optional.of(this.currentThreadType);
+    } else {
+      currentFactoryThreadType = Optional.empty();
     }
+    return this.discriminator.discriminate(
+        getNumberThreadCreationsInTimeWindow(),
+        getNumberParkingsInTimeWindow(),
+        getNumberThreads(),
+        averageCpuUsage,
+        currentFactoryThreadType
+      );
+  }
 
-    /* Native methods */
+  private double computeAverageCpuUsage() {
+    LinkedList<Double> currentCpuUsageSamples = new LinkedList<Double>();
+    Iterator<Double> iterator = this.cpuUsageSamples.iterator();
+    while (iterator.hasNext()) {
+      Double cpuUsageSample = iterator.next();
+      currentCpuUsageSamples.add(cpuUsageSample);
+    }
+    final double averageCpuUsage = currentCpuUsageSamples
+      .stream()
+      .mapToDouble(Double::doubleValue)
+      .average()
+      .orElse(0.0);
+    return averageCpuUsage;
+  }
 
-    private native void addMonitor(int adaptiveThreadFactoryId);
-    private native void removeMonitor(int adaptiveThreadFactoryId);
-    private native void setMonitorParameters(
-        int adaptiveThreadFactoryId, 
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength
+  /*
+   * Comment
+   */
+  public void close() {
+    if (this.cpuUsageProvider.isPresent()) {
+      stopCpuUsageSampler();
+    }
+    if (this.executionMode.equals(ExecutionMode.HOMOGENEOUS)) {
+      stopTransitionManager();
+    }
+    removeMonitor(this.adaptiveThreadFactoryId);
+  }
+
+  /* Methods for testing */
+
+  /**
+   * Comment
+   * @return Comment
+   */
+  public long getNumberParkingsInTimeWindow() {
+    long numberParkingsInTimeWindow = countParkingsInTimeWindow(
+      this.adaptiveThreadFactoryId
     );
-    /*
-    private native void setMonitorParameters(
-        int adaptiveThreadFactoryId, 
-        long parkingTimeWindowLength, 
-        long threadCreationTimeWindowLength,
-        long numberParkingsThreshold,
-        long numberThreadCreationsThreshold
+    return numberParkingsInTimeWindow;
+  }
+
+  /**
+   * Comment
+   * @return Comment
+   */
+  public long getNumberThreadCreationsInTimeWindow() {
+    long numberThreadCreationsInTimeWindow = countThreadCreationsInTimeWindow(
+      this.adaptiveThreadFactoryId
     );
-    */
-    /*
-    private native boolean queryMonitor(int adaptiveThreadFactoryId);
-    */
-    static native void registerJavaThreadAndAssociateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
-    static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by platform and virtual threads
-    static native void associateOSThreadWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
-    static native void disassociateOSThreadFromMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId); // called by virtual threads only
-    
-    /* Native methods for testing */
-    static native long countParkingsInTimeWindow(int adaptiveThreadFactoryId);
-    static native long countThreadCreationsInTimeWindow(int adaptiveThreadFactoryId);
-    static native long countNumberThreads(int adaptiveThreadFactoryId);
+    return numberThreadCreationsInTimeWindow;
+  }
+
+  /**
+   * Comment
+   * @return Comment
+   */
+  public long getNumberThreads() {
+    long numberThreads = countNumberThreads(this.adaptiveThreadFactoryId);
+    return numberThreads;
+  }
+
+  /**
+   * Comment
+   *
+   * @param   parkingTimeWindowLength Comment
+   * @param   threadCreationTimeWindowLength Comment
+   * @param   discriminator Comment
+   */
+  public void setParameters(
+    long parkingTimeWindowLength,
+    long threadCreationTimeWindowLength,
+    Discriminator discriminator
+  ) {
+    this.parkingTimeWindowLength = parkingTimeWindowLength;
+    this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+    this.discriminator = discriminator;
+    setMonitorParameters(
+      this.adaptiveThreadFactoryId,
+      this.parkingTimeWindowLength,
+      this.threadCreationTimeWindowLength
+    );
+  }
+
+  /* Native methods */
+
+  private native void addMonitor(int adaptiveThreadFactoryId);
+
+  private native void removeMonitor(int adaptiveThreadFactoryId);
+
+  private native void setMonitorParameters(
+    int adaptiveThreadFactoryId,
+    long parkingTimeWindowLength,
+    long threadCreationTimeWindowLength
+  );
+
+  static native void registerJavaThreadAndAssociateOSThreadWithMonitor(
+    int adaptiveThreadFactoryId,
+    long javaLevelThreadId
+  ); // called by platform and virtual threads
+
+  static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(
+    int adaptiveThreadFactoryId,
+    long javaLevelThreadId
+  ); // called by platform and virtual threads
+
+  static native void associateOSThreadWithMonitor(
+    int adaptiveThreadFactoryId,
+    long javaLevelThreadId
+  ); // called by virtual threads only
+
+  static native void disassociateOSThreadFromMonitor(
+    int adaptiveThreadFactoryId,
+    long javaLevelThreadId
+  ); // called by virtual threads only
+
+  /* Native methods for testing */
+  static native long countParkingsInTimeWindow(int adaptiveThreadFactoryId);
+
+  static native long countThreadCreationsInTimeWindow(
+    int adaptiveThreadFactoryId
+  );
+
+  static native long countNumberThreads(int adaptiveThreadFactoryId);
 }
