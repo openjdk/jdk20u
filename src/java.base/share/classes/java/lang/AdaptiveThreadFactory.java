@@ -1,5 +1,7 @@
 package java.lang;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Optional;
@@ -60,7 +62,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   private long parkingTimeWindowLength; // in milliseconds
   private long threadCreationTimeWindowLength; // in milliseconds
   private Discriminator discriminator;
-  private Optional<Supplier<Double>> cpuUsageProvider;
   private Optional<Integer> cpuUsageSamplingPeriod; // in milliseconds
   private Optional<Integer> numberRelevantCpuUsageSamples;
   private Optional<Integer> stateQueryInterval; // in milliseconds
@@ -73,6 +74,9 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   private ThreadFactory platformThreadFactory;
   private ThreadFactory virtualThreadFactory;
   private ConcurrentLinkedQueue<Thread> threads;
+  private Object operatingSystemMXBeanObject;
+  private Method getCpuLoadMethod;
+  private Supplier<Double> cpuUsageSupplier;
   private Thread cpuUsageSampler;
   private ConcurrentLinkedQueue<Double> cpuUsageSamples;
 
@@ -92,7 +96,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     private Optional<Long> parkingTimeWindowLength; // in milliseconds
     private Optional<Long> threadCreationTimeWindowLength; // in milliseconds
     private Optional<Discriminator> discriminator;
-    private Optional<Supplier<Double>> cpuUsageProvider;
     private Optional<Integer> cpuUsageSamplingPeriod;
     private Optional<Integer> numberRelevantCpuUsageSamples;
     private Optional<Integer> stateQueryInterval; // in milliseconds
@@ -107,7 +110,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
       this.parkingTimeWindowLength = Optional.empty();
       this.threadCreationTimeWindowLength = Optional.empty();
       this.discriminator = Optional.empty();
-      this.cpuUsageProvider = Optional.empty();
       this.cpuUsageSamplingPeriod = Optional.empty();
       this.numberRelevantCpuUsageSamples = Optional.empty();
       this.stateQueryInterval = Optional.empty();
@@ -165,19 +167,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
       Discriminator discriminator
     ) {
       this.discriminator = Optional.of(discriminator);
-      return this;
-    }
-
-    /**
-     * Comment
-     *
-     * @param cpuUsageProvider Comment
-     * @return Comment
-     */
-    public AdaptiveThreadFactoryBuilder setCpuUsageProvider(
-      Supplier<Double> cpuUsageProvider
-    ) {
-      this.cpuUsageProvider = Optional.of(cpuUsageProvider);
       return this;
     }
 
@@ -259,7 +248,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         this.parkingTimeWindowLength.get(),
         this.threadCreationTimeWindowLength.get(),
         this.discriminator.get(),
-        this.cpuUsageProvider,
         this.cpuUsageSamplingPeriod,
         this.numberRelevantCpuUsageSamples,
         this.stateQueryInterval,
@@ -298,18 +286,16 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
       new UserSpecificationRequirement()
         .setCondition(
           (
-            this.cpuUsageProvider.isPresent() &&
             this.cpuUsageSamplingPeriod.isPresent() &&
             this.numberRelevantCpuUsageSamples.isPresent()
           ) ||
           (
-            this.cpuUsageProvider.isEmpty() &&
             this.cpuUsageSamplingPeriod.isEmpty() &&
             this.numberRelevantCpuUsageSamples.isEmpty()
           )
         )
         .setMessage(
-          "Either all or none of the parameters {cpuUsageProvider, cpuUsageSamplingPeriod, numberRelevantCpuUsageSamples} must be set."
+          "Either all or none of the parameters {cpuUsageSamplingPeriod, numberRelevantCpuUsageSamples} must be set."
         )
     );
     requirements.add(
@@ -335,7 +321,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
   private boolean cpuUsageInEffect() {
     final boolean cpuUsageInEffect =
-      this.cpuUsageProvider.isPresent() &&
       this.cpuUsageSamplingPeriod.isPresent() &&
       this.numberRelevantCpuUsageSamples.isPresent();
     return cpuUsageInEffect;
@@ -362,11 +347,45 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
   }
 
+  private void createCpuUsageSupplier() {
+    try {
+      ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
+      Class<?> operatingSystemMXBeanClass = systemClassLoader.loadClass(
+        "com.sun.management.OperatingSystemMXBean"
+      );
+      Class<?> managementFactoryClass = systemClassLoader.loadClass(
+        "java.lang.management.ManagementFactory"
+      );
+      Method getOperatingSystemMXBeanMethod = managementFactoryClass.getDeclaredMethod(
+        "getOperatingSystemMXBean"
+      );
+      this.operatingSystemMXBeanObject =
+        operatingSystemMXBeanClass.cast(
+          getOperatingSystemMXBeanMethod.invoke(null)
+        );
+      this.getCpuLoadMethod =
+        operatingSystemMXBeanClass.getDeclaredMethod("getCpuLoad");
+      this.cpuUsageSupplier =
+        () -> {
+          try {
+            return (double) this.getCpuLoadMethod.invoke(
+                this.operatingSystemMXBeanObject
+              );
+          } catch (Exception exception) {
+            throw new RuntimeException(exception.getMessage());
+          }
+        };
+    } catch (Exception exception) {
+      throw new RuntimeException(exception.getMessage());
+    }
+  }
+
   private void initialise() {
     this.platformThreadFactory = Thread.ofPlatform().factory();
     this.virtualThreadFactory = Thread.ofVirtual().factory();
     this.threads = new ConcurrentLinkedQueue<Thread>();
     if (cpuUsageInEffect()) {
+      createCpuUsageSupplier();
       this.cpuUsageSamples = new ConcurrentLinkedQueue<Double>();
     }
     if (homogeneousExecutionModeInEffect()) {
@@ -387,7 +406,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    * @param   parkingTimeWindowLength Comment
    * @param   threadCreationTimeWindowLength Comment
    * @param   discriminator Comment
-   * @param   cpuUsageProvider Comment
    * @param   cpuUsageSamplingPeriod Comment
    * @param   numberRelevantCpuUsageSamples Comment
    * @param   stateQueryInterval Comment
@@ -399,7 +417,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     long parkingTimeWindowLength,
     long threadCreationTimeWindowLength,
     Discriminator discriminator,
-    Optional<Supplier<Double>> cpuUsageProvider,
     Optional<Integer> cpuUsageSamplingPeriod,
     Optional<Integer> numberRelevantCpuUsageSamples,
     Optional<Integer> stateQueryInterval,
@@ -410,7 +427,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     this.parkingTimeWindowLength = parkingTimeWindowLength;
     this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
     this.discriminator = discriminator;
-    this.cpuUsageProvider = cpuUsageProvider;
     this.cpuUsageSamplingPeriod = cpuUsageSamplingPeriod;
     this.numberRelevantCpuUsageSamples = numberRelevantCpuUsageSamples;
     this.stateQueryInterval = stateQueryInterval;
@@ -526,7 +542,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     this.cpuUsageSampler =
       new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
-          final double cpuUsageSample = this.cpuUsageProvider.get().get();
+          final double cpuUsageSample = this.cpuUsageSupplier.get();
           this.cpuUsageSamples.add(cpuUsageSample);
           if (
             this.cpuUsageSamples.size() >
@@ -598,7 +614,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
   private ThreadType queryMonitor() {
     Optional<Double> averageCpuUsage;
-    if (this.cpuUsageProvider.isPresent()) {
+    if (cpuUsageInEffect()) {
       averageCpuUsage = Optional.of(computeAverageCpuUsage());
     } else {
       averageCpuUsage = Optional.empty();
@@ -637,7 +653,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    * Comment
    */
   public void close() {
-    if (this.cpuUsageProvider.isPresent()) {
+    if (cpuUsageInEffect()) {
       stopCpuUsageSampler();
     }
     if (this.executionMode.equals(ExecutionMode.HOMOGENEOUS)) {
@@ -677,6 +693,30 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   public long getNumberThreads() {
     long numberThreads = countNumberThreads(this.adaptiveThreadFactoryId);
     return numberThreads;
+  }
+
+  /**
+   * Comment
+   * @return Comment
+   */
+  public double getSystemCpuUsage() {
+    if(cpuUsageInEffect()) {
+      return this.cpuUsageSupplier.get();
+    } else {
+      return -1.0;
+    }
+  }
+
+  /**
+   * Comment
+   * @return Comment
+   */
+  public double getAverageSystemCpuUsage() {
+    if(cpuUsageInEffect()) {
+      return computeAverageCpuUsage();
+    } else {
+      return -1.0;
+    }
   }
 
   /**
