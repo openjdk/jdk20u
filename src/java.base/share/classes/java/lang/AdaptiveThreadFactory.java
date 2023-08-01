@@ -76,7 +76,9 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   private ConcurrentLinkedQueue<Thread> threads;
   private Object operatingSystemMXBeanObject;
   private Method getCpuLoadMethod;
-  private Supplier<Double> cpuUsageSupplier;
+  private Supplier<Double> systemCpuUsageSupplier;
+  private Method getProcessCpuLoadMethod;
+  private Supplier<Double> processCpuUsageSupplier;
   private Thread cpuUsageSampler;
   private ConcurrentLinkedQueue<Double> cpuUsageSamples;
 
@@ -347,7 +349,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
   }
 
-  private void createCpuUsageSupplier() {
+  private void createSystemCpuUsageSupplier() {
     try {
       ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
       Class<?> operatingSystemMXBeanClass = systemClassLoader.loadClass(
@@ -365,10 +367,21 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         );
       this.getCpuLoadMethod =
         operatingSystemMXBeanClass.getDeclaredMethod("getCpuLoad");
-      this.cpuUsageSupplier =
+      this.getProcessCpuLoadMethod = operatingSystemMXBeanClass.getDeclaredMethod("getProcessCpuLoad");
+      this.systemCpuUsageSupplier =
         () -> {
           try {
             return (double) this.getCpuLoadMethod.invoke(
+                this.operatingSystemMXBeanObject
+              );
+          } catch (Exception exception) {
+            throw new RuntimeException(exception.getMessage());
+          }
+        };
+      this.processCpuUsageSupplier =
+        () -> {
+          try {
+            return (double) this.getProcessCpuLoadMethod.invoke(
                 this.operatingSystemMXBeanObject
               );
           } catch (Exception exception) {
@@ -385,7 +398,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     this.virtualThreadFactory = Thread.ofVirtual().factory();
     this.threads = new ConcurrentLinkedQueue<Thread>();
     if (cpuUsageInEffect()) {
-      createCpuUsageSupplier();
+      createSystemCpuUsageSupplier();
       this.cpuUsageSamples = new ConcurrentLinkedQueue<Double>();
     }
     if (homogeneousExecutionModeInEffect()) {
@@ -542,7 +555,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     this.cpuUsageSampler =
       new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
-          final double cpuUsageSample = this.cpuUsageSupplier.get();
+          final double cpuUsageSample = this.systemCpuUsageSupplier.get();
           this.cpuUsageSamples.add(cpuUsageSample);
           if (
             this.cpuUsageSamples.size() >
@@ -701,7 +714,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    */
   public double getSystemCpuUsage() {
     if(cpuUsageInEffect()) {
-      return this.cpuUsageSupplier.get();
+      return this.systemCpuUsageSupplier.get();
     } else {
       return -1.0;
     }
@@ -711,9 +724,9 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    * Comment
    * @return Comment
    */
-  public double getAverageSystemCpuUsage() {
+  public double getProcessCpuUsage() {
     if(cpuUsageInEffect()) {
-      return computeAverageCpuUsage();
+      return this.processCpuUsageSupplier.get();
     } else {
       return -1.0;
     }
