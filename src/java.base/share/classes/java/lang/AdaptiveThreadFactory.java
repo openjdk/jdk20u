@@ -367,7 +367,8 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         );
       this.getCpuLoadMethod =
         operatingSystemMXBeanClass.getDeclaredMethod("getCpuLoad");
-      this.getProcessCpuLoadMethod = operatingSystemMXBeanClass.getDeclaredMethod("getProcessCpuLoad");
+      this.getProcessCpuLoadMethod =
+        operatingSystemMXBeanClass.getDeclaredMethod("getProcessCpuLoad");
       this.systemCpuUsageSupplier =
         () -> {
           try {
@@ -445,6 +446,62 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     this.stateQueryInterval = stateQueryInterval;
     this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
     this.threadCreationHandler = threadCreationHandler;
+    validateUserSpecification();
+    addMonitor(this.adaptiveThreadFactoryId);
+    setMonitorParameters(
+      this.adaptiveThreadFactoryId,
+      this.parkingTimeWindowLength,
+      this.threadCreationTimeWindowLength
+    );
+    initialise();
+  }
+
+  /**
+   * Comment
+   *
+   * @param   adaptiveThreadFactoryId Comment
+   */
+  public AdaptiveThreadFactory(int adaptiveThreadFactoryId) {
+    this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+    this.parkingTimeWindowLength = 200;
+    this.threadCreationTimeWindowLength = 200;
+    this.discriminator =
+      (
+        long numberThreadCreationsInTimeWindow,
+        long numberParkingsInTimeWindow,
+        long numberFactoryThreads,
+        Optional<Double> cpuUsage,
+        Optional<AdaptiveThreadFactory.ThreadType> currentThreadType
+      ) -> {
+        if (numberParkingsInTimeWindow < 600) {
+          return AdaptiveThreadFactory.ThreadType.PLATFORM;
+        } else if (numberParkingsInTimeWindow >= 1100) {
+          return AdaptiveThreadFactory.ThreadType.VIRTUAL;
+        } else {
+          if (
+            currentThreadType
+              .get()
+              .equals(AdaptiveThreadFactory.ThreadType.PLATFORM)
+          ) {
+            if (cpuUsage.get() >= 0.5) {
+              return AdaptiveThreadFactory.ThreadType.PLATFORM;
+            } else {
+              return AdaptiveThreadFactory.ThreadType.VIRTUAL;
+            }
+          } else {
+            if (cpuUsage.get() >= 0.425) {
+              return AdaptiveThreadFactory.ThreadType.PLATFORM;
+            } else {
+              return AdaptiveThreadFactory.ThreadType.VIRTUAL;
+            }
+          }
+        }
+      };
+    this.cpuUsageSamplingPeriod = Optional.of(100);
+    this.numberRelevantCpuUsageSamples = Optional.of(5);
+    this.stateQueryInterval = Optional.of(1500);
+    this.numberRecurrencesUntilTransition = Optional.of(5);
+    this.threadCreationHandler = Optional.empty();
     validateUserSpecification();
     addMonitor(this.adaptiveThreadFactoryId);
     setMonitorParameters(
@@ -713,7 +770,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    * @return Comment
    */
   public double getSystemCpuUsage() {
-    if(cpuUsageInEffect()) {
+    if (cpuUsageInEffect()) {
       return this.systemCpuUsageSupplier.get();
     } else {
       return -1.0;
@@ -725,7 +782,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    * @return Comment
    */
   public double getProcessCpuUsage() {
-    if(cpuUsageInEffect()) {
+    if (cpuUsageInEffect()) {
       return this.processCpuUsageSupplier.get();
     } else {
       return -1.0;
