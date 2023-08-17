@@ -34,6 +34,8 @@ public:
         pthread_mutex_unlock(&_lock);
     }
 
+    // TO DO: 
+    // maintain a reference to tail of the list and append a new element to the tail so that the list does not need to be traversed
     void append(const V& value) {
         pthread_mutex_lock(&_lock);
         SimpleConcurrentLinkedListNode<V>* newNode = new SimpleConcurrentLinkedListNode<V>();

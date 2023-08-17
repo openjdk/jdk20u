@@ -52,10 +52,6 @@
 #include "jfr/jfr.hpp"
 #endif
 
-/* MODIFY START */
-#include "runtime/adaptive_thread_factory_monitor.hpp"
-/* MODIFY END */
-
 #ifndef USE_LIBRARY_BASED_TLS_ONLY
 // Current thread is maintained as a thread-local variable
 THREAD_LOCAL Thread* Thread::_thr_current = NULL;
@@ -202,10 +198,6 @@ void Thread::call_run() {
 
   // At this point, Thread object should be fully initialized and
   // Thread::current() should be set.
-
-  /* MODIFY START */
-  //AdaptiveThreadFactoryMonitor::incrementNumberOfMonitoredThreads();
-  /* MODIFY END */
 
   assert(Thread::current_or_null() != NULL, "current thread is unset");
   assert(Thread::current_or_null() == this, "current thread is wrong");
