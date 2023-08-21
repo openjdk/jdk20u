@@ -774,23 +774,12 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   /**
    * Comment
    *
-   * @param   parkingTimeWindowLength Comment
-   * @param   threadCreationTimeWindowLength Comment
    * @param   discriminator Comment
    */
-  public void setParameters(
-    long parkingTimeWindowLength,
-    long threadCreationTimeWindowLength,
+  public void setDiscriminator(
     Discriminator discriminator
   ) {
-    this.parkingTimeWindowLength = parkingTimeWindowLength;
-    this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
     this.discriminator = discriminator;
-    setMonitorParameters(
-      this.adaptiveThreadFactoryId,
-      this.parkingTimeWindowLength,
-      this.threadCreationTimeWindowLength
-    );
   }
 
   /* Native methods */
