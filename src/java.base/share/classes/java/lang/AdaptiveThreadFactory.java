@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 /**
@@ -57,6 +58,14 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     );
   }
 
+  // factory identification
+
+  private static AtomicInteger adaptiveThreadFactoryCounter;
+
+  static {
+    adaptiveThreadFactoryCounter = new AtomicInteger(0);
+  }
+
   // user specification
   private int adaptiveThreadFactoryId;
   private long parkingTimeWindowLength; // in milliseconds
@@ -94,7 +103,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    */
   public static class AdaptiveThreadFactoryBuilder {
 
-    private Optional<Integer> adaptiveThreadFactoryId;
     private Optional<Long> parkingTimeWindowLength; // in milliseconds
     private Optional<Long> threadCreationTimeWindowLength; // in milliseconds
     private Optional<Discriminator> discriminator;
@@ -108,7 +116,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      * Comment
      */
     public AdaptiveThreadFactoryBuilder() {
-      this.adaptiveThreadFactoryId = Optional.empty();
       this.parkingTimeWindowLength = Optional.empty();
       this.threadCreationTimeWindowLength = Optional.empty();
       this.discriminator = Optional.empty();
@@ -117,19 +124,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
       this.stateQueryInterval = Optional.empty();
       this.numberRecurrencesUntilTransition = Optional.empty();
       this.threadCreationHandler = Optional.empty();
-    }
-
-    /**
-     * Comment
-     *
-     * @param adaptiveThreadFactoryId Comment
-     * @return Comment
-     */
-    public AdaptiveThreadFactoryBuilder setAdaptiveThreadFactoryId(
-      int adaptiveThreadFactoryId
-    ) {
-      this.adaptiveThreadFactoryId = Optional.of(adaptiveThreadFactoryId);
-      return this;
     }
 
     /**
@@ -246,7 +240,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      */
     public AdaptiveThreadFactory build() {
       AdaptiveThreadFactory adaptiveThreadFactory = new AdaptiveThreadFactory(
-        this.adaptiveThreadFactoryId.get(),
         this.parkingTimeWindowLength.get(),
         this.threadCreationTimeWindowLength.get(),
         this.discriminator.get(),
@@ -416,7 +409,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   /**
    * Comment
    *
-   * @param   adaptiveThreadFactoryId Comment
    * @param   parkingTimeWindowLength Comment
    * @param   threadCreationTimeWindowLength Comment
    * @param   discriminator Comment
@@ -427,7 +419,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    * @param   threadCreationHandler Comment
    */
   public AdaptiveThreadFactory(
-    int adaptiveThreadFactoryId,
     long parkingTimeWindowLength,
     long threadCreationTimeWindowLength,
     Discriminator discriminator,
@@ -437,7 +428,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     Optional<Integer> numberRecurrencesUntilTransition,
     Optional<Runnable> threadCreationHandler
   ) {
-    this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
+    this.adaptiveThreadFactoryId = adaptiveThreadFactoryCounter.incrementAndGet();
     this.parkingTimeWindowLength = parkingTimeWindowLength;
     this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
     this.discriminator = discriminator;
@@ -459,13 +450,11 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   /**
    * Comment
    *
-   * @param   adaptiveThreadFactoryId Comment
    */
-  public AdaptiveThreadFactory(int adaptiveThreadFactoryId) {
-    this.adaptiveThreadFactoryId = adaptiveThreadFactoryId;
-    this.parkingTimeWindowLength = 200;
-    this.threadCreationTimeWindowLength = 200;
-    this.discriminator =
+  public AdaptiveThreadFactory() {
+    this(
+      200,
+      200,
       (
         long numberThreadCreationsInTimeWindow,
         long numberParkingsInTimeWindow,
@@ -496,20 +485,13 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
             }
           }
         }
-      };
-    this.cpuUsageSamplingPeriod = Optional.of(100);
-    this.numberRelevantCpuUsageSamples = Optional.of(5);
-    this.stateQueryInterval = Optional.of(1500);
-    this.numberRecurrencesUntilTransition = Optional.of(5);
-    this.threadCreationHandler = Optional.empty();
-    validateUserSpecification();
-    addMonitor(this.adaptiveThreadFactoryId);
-    setMonitorParameters(
-      this.adaptiveThreadFactoryId,
-      this.parkingTimeWindowLength,
-      this.threadCreationTimeWindowLength
+      },
+      Optional.of(100),
+      Optional.of(5),
+      Optional.of(1500),
+      Optional.of(5),
+      Optional.empty()
     );
-    initialise();
   }
 
   private boolean shallTransition(ThreadType newQueryResult) {
