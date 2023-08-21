@@ -80,7 +80,6 @@ bool AdaptiveThreadFactoryMonitors::answerQuery(int adaptiveThreadFactoryId) {
 
 void AdaptiveThreadFactoryMonitors::registerWithMonitor(int adaptiveThreadFactoryId, long javaLevelThreadId) {
     AdaptiveThreadFactoryMonitor& monitor = getMonitor(adaptiveThreadFactoryId);
-    monitor.recordThreadCreation();
     pthread_setspecific(_monitorAccessKey, &monitor);
     const long& registeredJavaLevelThreadId = monitor.addAndGetJavaLevelThreadId(javaLevelThreadId);
     pthread_setspecific(_javaLevelThreadIdAccessKey, &registeredJavaLevelThreadId);
@@ -108,6 +107,11 @@ void AdaptiveThreadFactoryMonitors::disassociateFromMonitor(int adaptiveThreadFa
 void AdaptiveThreadFactoryMonitors::recordParking(int adaptiveThreadFactoryId) {
     AdaptiveThreadFactoryMonitor& monitor = getMonitor(adaptiveThreadFactoryId);
     monitor.recordParking();
+}
+
+void AdaptiveThreadFactoryMonitors::recordThreadCreation(int adaptiveThreadFactoryId) {
+    AdaptiveThreadFactoryMonitor& monitor = getMonitor(adaptiveThreadFactoryId);
+    monitor.recordThreadCreation();
 }
 
 long AdaptiveThreadFactoryMonitors::countParkings(int adaptiveThreadFactoryId) {

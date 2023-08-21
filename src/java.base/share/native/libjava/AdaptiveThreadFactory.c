@@ -17,6 +17,7 @@ static JNINativeMethod methods[] = {
     {"deregisterJavaThreadAndDisassociateOSThreadFromMonitor", "(IJ)V", (void*)&JVM_DeregisterFromMonitor},
     {"associateOSThreadWithMonitor", "(IJ)V", (void*)&JVM_AssociateWithMonitor},
     {"disassociateOSThreadFromMonitor", "(IJ)V", (void*)&JVM_DisassociateFromMonitor},
+    {"recordThreadCreation", "(I)V", (void*)&JVM_RecordThreadCreation},
     {"countParkingsInTimeWindow", "(I)J", (void*)&JVM_CountParkings},
     {"countThreadCreationsInTimeWindow", "(I)J", (void*)&JVM_CountThreadCreations},
     {"countNumberThreads", "(I)J", (void*)&JVM_CountNumberThreads},

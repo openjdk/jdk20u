@@ -217,6 +217,7 @@ JVM_DeregisterFromMonitor
 JVM_AssociateWithMonitor
 JVM_DisassociateFromMonitor
 JVM_RecordParking
+JVM_RecordThreadCreation
 JVM_CountParkings
 JVM_CountThreadCreations
 JVM_CountNumberThreads

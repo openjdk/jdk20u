@@ -38,8 +38,8 @@ class AdaptiveThreadFactoryMonitor : public CHeapObj<mtInternal> {
         const long& addAndGetJavaLevelThreadId(long javaLevelThreadId);
         const long& getJavaLevelThreadId(long javaLevelThreadId);
         void removeJavaLevelThreadId(long javaLevelThreadId);
-        void recordThreadCreation();
         void recordParking();
+        void recordThreadCreation();
         /*
         bool shallCreateVirtualThread();
         */

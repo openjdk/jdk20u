@@ -72,6 +72,7 @@ void AdaptiveThreadFactoryMonitor::recordThreadCreation() {
     long currentTimeInMilliseconds = getCurrentTimeInMilliseconds();
     _threadCreationTimes->append(currentTimeInMilliseconds);
 }
+
 void AdaptiveThreadFactoryMonitor::recordParking() {
     long currentTimeInMilliseconds = getCurrentTimeInMilliseconds();
     _parkingTimes->append(currentTimeInMilliseconds);
