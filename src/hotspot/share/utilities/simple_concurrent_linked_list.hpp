@@ -13,6 +13,7 @@ public:
 
     pthread_mutex_t _lock;
     SimpleConcurrentLinkedListNode<V>* _head;
+    SimpleConcurrentLinkedListNode<V>* _tail;
 
     SimpleConcurrentLinkedList() {
         if(pthread_mutex_init(&_lock, NULL) != 0) {                                                                                           
@@ -20,6 +21,7 @@ public:
         }
         pthread_mutex_lock(&_lock);  
         _head = nullptr;
+        _tail = nullptr;
         pthread_mutex_unlock(&_lock);
     }
 
@@ -34,8 +36,6 @@ public:
         pthread_mutex_unlock(&_lock);
     }
 
-    // TO DO: 
-    // maintain a reference to tail of the list and append a new element to the tail so that the list does not need to be traversed
     void append(const V& value) {
         pthread_mutex_lock(&_lock);
         SimpleConcurrentLinkedListNode<V>* newNode = new SimpleConcurrentLinkedListNode<V>();
@@ -43,12 +43,10 @@ public:
         newNode->_next = nullptr;
         if(_head == nullptr) {
             _head = newNode;
+            _tail = newNode;
         } else {
-            SimpleConcurrentLinkedListNode<V>* current = _head;
-            while(current->_next != nullptr) {
-                current = current->_next;
-            }
-            current->_next = newNode;
+            _tail->_next = newNode; 
+            _tail = newNode;
         }
         pthread_mutex_unlock(&_lock);
     }
@@ -62,6 +60,9 @@ public:
         if(_head->_value == value) {
             SimpleConcurrentLinkedListNode<V>* temporary = _head;
             _head = _head->_next;
+            if(_head == nullptr) {
+                _tail = nullptr; 
+            }
             delete temporary;
             pthread_mutex_unlock(&_lock);
             return;
@@ -73,6 +74,9 @@ public:
         if(current->_next != nullptr) {
             SimpleConcurrentLinkedListNode<V>* temporary = current->_next;
             current->_next = current->_next->_next;
+            if(current->_next == nullptr) {
+                _tail = current; 
+            }
             delete temporary;
             pthread_mutex_unlock(&_lock);
             return;
@@ -120,6 +124,9 @@ public:
             }
         }
         _head = initial->_next;
+        if(_head == nullptr) {
+            _tail = nullptr; 
+        }   
         delete initial;
         pthread_mutex_unlock(&_lock);
         return counter;
@@ -134,6 +141,7 @@ public:
             delete temporary;
         }
         _head = nullptr;
+        _tail = nullptr;
         pthread_mutex_unlock(&_lock);
     }
 
