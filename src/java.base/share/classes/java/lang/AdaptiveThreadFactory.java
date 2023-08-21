@@ -342,7 +342,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     }
   }
 
-  private void createSystemCpuUsageSupplier() {
+  private void createCpuUsageSupplier() {
     try {
       ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
       Class<?> operatingSystemMXBeanClass = systemClassLoader.loadClass(
@@ -392,7 +392,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     this.virtualThreadFactory = Thread.ofVirtual().factory();
     this.threads = new ConcurrentLinkedQueue<Thread>();
     if (cpuUsageInEffect()) {
-      createSystemCpuUsageSupplier();
+      createCpuUsageSupplier();
       this.cpuUsageSamples = new ConcurrentLinkedQueue<Double>();
     }
     if (homogeneousExecutionModeInEffect()) {
