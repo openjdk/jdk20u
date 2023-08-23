@@ -453,7 +453,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, Closeable {
    * @param   numberRecurrencesUntilTransition Comment
    * @param   threadCreationHandler Comment
    */
-  public AdaptiveThreadFactory(
+  private AdaptiveThreadFactory(
     long parkingTimeWindowLength,
     long threadCreationTimeWindowLength,
     Discriminator discriminator,
