@@ -9,12 +9,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
-import java.io.Closeable;
 
 /**
  * Comment
  */
-public class AdaptiveThreadFactory implements ThreadFactory, Closeable {
+public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
   private static native void registerNatives();
 
