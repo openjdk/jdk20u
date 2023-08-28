@@ -95,8 +95,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   private Thread transitionManager;
   private ThreadType currentThreadType;
   private LinkedList<ThreadType> queryResults;
-  private Integer maximalNumberTerminationAttempts;
-  private Integer threadTerminationWaitingTimeInMilliseconds;
 
   /**
    * Comment
@@ -303,11 +301,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     return homogeneousExecutionModeInEffect;
   }
 
-  private void setDefaultInternalValues() {
-    this.maximalNumberTerminationAttempts = 10;
-    this.threadTerminationWaitingTimeInMilliseconds = 50;
-  }
-
   private void startPeriodicallyActiveThreads() {
     startCpuUsageSampler();
     if (homogeneousExecutionModeInEffect()) {
@@ -373,7 +366,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     } else {
       this.executionMode = ExecutionMode.HETEROGENEOUS;
     }
-    setDefaultInternalValues();
     startPeriodicallyActiveThreads();
   }
 
@@ -525,59 +517,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
       oldThread.setAsInterruptedByAdaptiveThreadFactory();
     }
   }
-
-  /*
-  private void performTransition() {
-    LinkedList<Thread> busyThreads = new LinkedList<Thread>();
-    Iterator<Thread> iterator = this.threads.iterator();
-    while (iterator.hasNext()) {
-      Thread busyThread = iterator.next();
-      busyThreads.add(busyThread);
-    }
-    int terminationAttemptNumber = 0;
-    LinkedList<Thread> persistentBusyThreads = new LinkedList<Thread>();
-    for (final Thread busyThread : busyThreads) {
-      busyThread.setAsInterruptedByAdaptiveThreadFactory();
-      try {
-        busyThread.join(this.threadTerminationWaitingTimeInMilliseconds);
-      } catch (InterruptedException interruptedException) {
-        throw new RuntimeException(interruptedException.getMessage());
-      }
-      if (busyThread.isAlive()) {
-        persistentBusyThreads.add(busyThread);
-      } else {
-        this.threadCreationHandler.ifPresent((Runnable runnable) ->
-            runnable.run()
-          );
-      }
-    }
-    busyThreads = persistentBusyThreads;
-    persistentBusyThreads = new LinkedList<Thread>();
-    terminationAttemptNumber += 1;
-    while (
-      terminationAttemptNumber < this.maximalNumberTerminationAttempts &&
-      busyThreads.size() > 0
-    ) {
-      for (final Thread busyThread : busyThreads) {
-        try {
-          busyThread.join(this.threadTerminationWaitingTimeInMilliseconds);
-        } catch (InterruptedException interruptedException) {
-          throw new RuntimeException(interruptedException.getMessage());
-        }
-        if (busyThread.isAlive()) {
-          persistentBusyThreads.add(busyThread);
-        } else {
-          this.threadCreationHandler.ifPresent((Runnable runnable) ->
-              runnable.run()
-            );
-        }
-      }
-      busyThreads = persistentBusyThreads;
-      persistentBusyThreads = new LinkedList<Thread>();
-      terminationAttemptNumber += 1;
-    }
-  }
-  */
 
   private void startTransitionManager() {
     this.transitionManager =
