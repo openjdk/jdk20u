@@ -515,6 +515,19 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   }
 
   private void performTransition() {
+    LinkedList<Thread> oldThreads = new LinkedList<Thread>();
+    Iterator<Thread> iterator = this.threads.iterator();
+    while (iterator.hasNext()) {
+      Thread oldThread = iterator.next();
+      oldThreads.add(oldThread);
+    }
+    for (final Thread oldThread : oldThreads) {
+      oldThread.setAsInterruptedByAdaptiveThreadFactory();
+    }
+  }
+
+  /*
+  private void performTransition() {
     LinkedList<Thread> busyThreads = new LinkedList<Thread>();
     Iterator<Thread> iterator = this.threads.iterator();
     while (iterator.hasNext()) {
@@ -564,6 +577,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
       terminationAttemptNumber += 1;
     }
   }
+  */
 
   private void startTransitionManager() {
     this.transitionManager =
@@ -665,6 +679,11 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         Thread.currentThread().threadId()
       );
       this.threads.remove(Thread.currentThread());
+      if(Thread.currentThread().isInterruptedByAdaptiveThreadFactory()) {
+        this.threadCreationHandler.ifPresent((Runnable runnable) ->
+          runnable.run()
+        );
+      }
     };
     return augmentedTask;
   }
