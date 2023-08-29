@@ -112,13 +112,6 @@
 
 #include <errno.h>
 
-/* MODIFY START */
-
-#include "runtime/adaptive_thread_factory_monitor.hpp"
-#include "runtime/adaptive_thread_factory_monitors.hpp"
-
-/* MODIFY END */
-
 /*
   NOTE about use of any ctor or function call that can trigger a safepoint/GC:
   such ctors and calls MUST NOT come between an oop declaration/init and its
@@ -712,92 +705,6 @@ JVM_END
 JVM_LEAF(jboolean, JVM_IsFinalizationEnabled(JNIEnv * env))
   return InstanceKlass::is_finalization_enabled();
 JVM_END
-
-/* MODIFY START */
-
-JVM_ENTRY(void, JVM_AddMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
-  AdaptiveThreadFactoryMonitors::addAdaptiveThreadFactoryMonitor(adaptiveThreadFactoryId);
-JVM_END
-
-JVM_ENTRY(void, JVM_RemoveMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
-  AdaptiveThreadFactoryMonitors::removeAdaptiveThreadFactoryMonitor(adaptiveThreadFactoryId);
-JVM_END
-
-JVM_ENTRY(void, JVM_SetMonitorParameters(
-  JNIEnv *env, 
-  jobject adaptiveThreadFactory, 
-  jint adaptiveThreadFactoryId, 
-  jlong parkingTimeWindowLength, 
-  jlong threadCreationTimeWindowLength
-))
-  AdaptiveThreadFactoryMonitors::setMonitorParameters(
-    adaptiveThreadFactoryId, 
-    parkingTimeWindowLength, 
-    threadCreationTimeWindowLength
-  );
-JVM_END
-
-/*
-JVM_ENTRY(void, JVM_SetMonitorParameters(
-  JNIEnv *env, 
-  jobject adaptiveThreadFactory, 
-  jint adaptiveThreadFactoryId, 
-  jlong parkingTimeWindowLength, 
-  jlong threadCreationTimeWindowLength,
-  jlong numberParkingsThreshold,
-  jlong numberThreadCreationsThreshold
-))
-  AdaptiveThreadFactoryMonitors::setMonitorParameters(
-    adaptiveThreadFactoryId, 
-    parkingTimeWindowLength, 
-    threadCreationTimeWindowLength,
-    numberParkingsThreshold,
-    numberThreadCreationsThreshold
-  );
-JVM_END
-
-JVM_ENTRY(jboolean, JVM_QueryMonitor(JNIEnv *env, jobject adaptiveThreadFactory, jint adaptiveThreadFactoryId))
-  return (jboolean)AdaptiveThreadFactoryMonitors::answerQuery(adaptiveThreadFactoryId);
-JVM_END
-*/
-
-JVM_ENTRY(void, JVM_RegisterWithMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId))
-  AdaptiveThreadFactoryMonitors::registerWithMonitor(adaptiveThreadFactoryId, javaLevelThreadId);
-JVM_END
-
-JVM_ENTRY(void, JVM_DeregisterFromMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId))
-  AdaptiveThreadFactoryMonitors::deregisterFromMonitor(adaptiveThreadFactoryId, javaLevelThreadId);
-JVM_END
-
-JVM_ENTRY(void, JVM_AssociateWithMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId))
-  AdaptiveThreadFactoryMonitors::associateWithMonitor(adaptiveThreadFactoryId, javaLevelThreadId);
-JVM_END
-
-JVM_ENTRY(void, JVM_DisassociateFromMonitor(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId, jlong javaLevelThreadId))
-  AdaptiveThreadFactoryMonitors::disassociateFromMonitor(adaptiveThreadFactoryId, javaLevelThreadId);
-JVM_END
-
-JVM_ENTRY(void, JVM_RecordParking(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId))
-  AdaptiveThreadFactoryMonitors::recordParking(adaptiveThreadFactoryId);
-JVM_END
-
-JVM_ENTRY(void, JVM_RecordThreadCreation(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId))
-  AdaptiveThreadFactoryMonitors::recordThreadCreation(adaptiveThreadFactoryId);
-JVM_END
-
-JVM_ENTRY(jlong, JVM_CountParkings(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId))
-  return AdaptiveThreadFactoryMonitors::countParkings(adaptiveThreadFactoryId);
-JVM_END
-
-JVM_ENTRY(jlong, JVM_CountThreadCreations(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId))
-  return AdaptiveThreadFactoryMonitors::countThreadCreations(adaptiveThreadFactoryId);
-JVM_END
-
-JVM_ENTRY(jlong, JVM_CountNumberThreads(JNIEnv *env, jclass adaptiveThreadFactoryClass, jint adaptiveThreadFactoryId))
-  return AdaptiveThreadFactoryMonitors::countNumberThreads(adaptiveThreadFactoryId);
-JVM_END
-
-/* MODIFY END */
 
 // jdk.internal.vm.Continuation /////////////////////////////////////////////////////
 

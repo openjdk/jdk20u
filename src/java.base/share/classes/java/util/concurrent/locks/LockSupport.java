@@ -39,7 +39,7 @@ import jdk.internal.misc.VirtualThreads;
 import jdk.internal.misc.Unsafe;
 
 /* MODIFY START */
-import java.lang.AdaptiveThreadFactory;
+import java.util.concurrent.AdaptiveThreadFactory;
 /* MODIFY END */
 
 /**
@@ -220,10 +220,8 @@ public class LockSupport {
         setBlocker(t, blocker);
         try {
             /* MODIFY START */
-            if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
-                recordParking(
-                    Thread.currentThread().getAdaptiveThreadFactoryId()
-                );
+            if(AdaptiveThreadFactory.existsAssociation(Thread.currentThread())) {
+                AdaptiveThreadFactory.recordParking(Thread.currentThread());
             }
             /* MODIFY END */
             if (t.isVirtual()) {
@@ -275,10 +273,8 @@ public class LockSupport {
             setBlocker(t, blocker);
             try {
                 /* MODIFY START */
-                if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
-                    recordParking(
-                        Thread.currentThread().getAdaptiveThreadFactoryId()
-                    );
+                if(AdaptiveThreadFactory.existsAssociation(Thread.currentThread())) {
+                    AdaptiveThreadFactory.recordParking(Thread.currentThread());
                 }
                 /* MODIFY END */
                 if (t.isVirtual()) {
@@ -330,10 +326,8 @@ public class LockSupport {
         setBlocker(t, blocker);
         try {
             /* MODIFY START */
-            if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
-                recordParking(
-                    Thread.currentThread().getAdaptiveThreadFactoryId()
-                );
+            if(AdaptiveThreadFactory.existsAssociation(Thread.currentThread())) {
+                AdaptiveThreadFactory.recordParking(Thread.currentThread());
             }
             /* MODIFY END */
             if (t.isVirtual()) {
@@ -391,10 +385,8 @@ public class LockSupport {
      */
     public static void park() {
         /* MODIFY START */
-        if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
-            recordParking(
-                Thread.currentThread().getAdaptiveThreadFactoryId()
-            );
+        if(AdaptiveThreadFactory.existsAssociation(Thread.currentThread())) {
+            AdaptiveThreadFactory.recordParking(Thread.currentThread());
         }
         /* MODIFY END */
         if (Thread.currentThread().isVirtual()) {
@@ -437,10 +429,8 @@ public class LockSupport {
     public static void parkNanos(long nanos) {
         if (nanos > 0) {
             /* MODIFY START */
-            if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
-                recordParking(
-                    Thread.currentThread().getAdaptiveThreadFactoryId()
-                );
+            if(AdaptiveThreadFactory.existsAssociation(Thread.currentThread())) {
+                AdaptiveThreadFactory.recordParking(Thread.currentThread());
             }
             /* MODIFY END */
             if (Thread.currentThread().isVirtual()) {
@@ -483,10 +473,8 @@ public class LockSupport {
      */
     public static void parkUntil(long deadline) {
         /* MODIFY START */
-        if(Thread.currentThread().isAssociatedWithAdaptiveThreadFactory()) {
-            recordParking(
-                Thread.currentThread().getAdaptiveThreadFactoryId()
-            );
+        if(AdaptiveThreadFactory.existsAssociation(Thread.currentThread())) {
+            AdaptiveThreadFactory.recordParking(Thread.currentThread());
         }
         /* MODIFY END */
         if (Thread.currentThread().isVirtual()) {
@@ -507,16 +495,5 @@ public class LockSupport {
     private static final Unsafe U = Unsafe.getUnsafe();
     private static final long PARKBLOCKER
         = U.objectFieldOffset(Thread.class, "parkBlocker");
-
-    /* MODIFY START */
-
-    private static native void registerNatives();
-    static {
-        registerNatives();
-    }
-
-    private static native void recordParking(int adaptiveThreadFactoryId);
-
-    /* MODIFY END */
 
 }

@@ -172,10 +172,6 @@ jint init_globals() {
     JVMFlag::printFlags(tty, false, PrintFlagsRanges);
   }
 
-  /* MODIFY START */
-  adaptive_thread_factory_monitors_initialisation();
-  /* MODIFY END */
-
   return JNI_OK;
 }
 

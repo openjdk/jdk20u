@@ -61,10 +61,6 @@ import sun.nio.ch.Interruptible;
 import sun.security.action.GetPropertyAction;
 import static java.util.concurrent.TimeUnit.*;
 
-/* MODIFY START */
-import java.lang.AdaptiveThreadFactory;
-/* MODIFY END */
-
 /**
  * A thread that is scheduled by the Java virtual machine rather than the operating
  * system.
@@ -428,28 +424,12 @@ final class VirtualThread extends BaseVirtualThread {
         // unmount
         if (notifyJvmti) notifyJvmtiUnmountBegin(false);
         unmount();
-        /* MODIFY START */
-        if(this.isAssociatedWithAdaptiveThreadFactory()) {
-            AdaptiveThreadFactory.disassociateOSThreadFromMonitor(
-                this.getAdaptiveThreadFactoryId(),
-                this.threadId()
-            );
-        }
-        /* MODIFY END */
         try {
             return Continuation.yield(VTHREAD_SCOPE);
         } finally {
             // re-mount
             mount();
             if (notifyJvmti) notifyJvmtiMountEnd(false);
-            /* MODIFY START */
-            if(this.isAssociatedWithAdaptiveThreadFactory()) {
-                AdaptiveThreadFactory.associateOSThreadWithMonitor(
-                    this.getAdaptiveThreadFactoryId(),
-                    this.threadId()
-                );
-            }
-            /* MODIFY END */
         }
     }
 

@@ -1,10 +1,11 @@
-package java.lang;
+package java.util.concurrent;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -15,10 +16,69 @@ import java.util.function.Supplier;
  */
 public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
-  private static native void registerNatives();
-
   static {
-    registerNatives();
+    adaptiveThreadFactoryCounter = new AtomicInteger(0);
+    associations = new ConcurrentHashMap<Thread, AdaptiveThreadFactory>();
+  }
+
+  private static ConcurrentHashMap<Thread, AdaptiveThreadFactory> associations;
+  private ConcurrentHashMap<Thread, Boolean> marks;
+  private ConcurrentLinkedQueue<Long> parkingTimes;
+  private ConcurrentLinkedQueue<Long> threadCreationTimes;
+
+  private void addParkingTime(long parkingTime) {
+    this.parkingTimes.add(parkingTime);
+  }
+
+  private void addThreadCreationTime(long threadCreationTime) {
+    this.threadCreationTimes.add(threadCreationTime);
+  }
+
+  /**
+   * Comment
+   *
+   * @param thread Comment
+   */
+  public static void recordParking(Thread thread) {
+    associations.get(thread).addParkingTime(System.nanoTime());
+  }
+
+  /**
+   * Comment
+   *
+   * @param thread Comment
+   * @return Comment
+   */
+  public static boolean existsAssociation(Thread thread) {
+    return associations.containsKey(thread);
+  }
+
+  private void recordThreadCreation() {
+    addThreadCreationTime(System.nanoTime());
+  }
+
+  private void register(Thread thread) {
+    associations.put(thread, this);
+    this.marks.put(thread, false);
+  }
+
+  private void deregister(Thread thread) {
+    associations.remove(thread);
+    this.marks.remove(thread);
+  }
+
+  /**
+   * Comment
+   *
+   * @param thread Comment
+   * @return Comment
+   */
+  public static boolean isMarkedForTransition(Thread thread) {
+    return associations.get(thread).getMarks().get(thread);
+  }
+
+  private ConcurrentHashMap<Thread, Boolean> getMarks() {
+    return this.marks;
   }
 
   private enum ExecutionMode {
@@ -62,14 +122,10 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
   private static AtomicInteger adaptiveThreadFactoryCounter;
 
-  static {
-    adaptiveThreadFactoryCounter = new AtomicInteger(0);
-  }
-
   // user specification
   private int adaptiveThreadFactoryId;
-  private long parkingTimeWindowLength; // in milliseconds
-  private long threadCreationTimeWindowLength; // in milliseconds
+  private long parkingTimeWindowLength; // in nanoseconds
+  private long threadCreationTimeWindowLength; // in nanoseconds
   private Discriminator discriminator;
   private int cpuUsageSamplingPeriod; // in milliseconds
   private int numberRelevantCpuUsageSamples;
@@ -82,7 +138,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   private ExecutionMode executionMode;
   private ThreadFactory platformThreadFactory;
   private ThreadFactory virtualThreadFactory;
-  private ConcurrentLinkedQueue<Thread> threads;
   private Object operatingSystemMXBeanObject;
   private Method getCpuLoadMethod;
   private Supplier<Double> systemCpuUsageSupplier;
@@ -115,10 +170,12 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
      */
     public AdaptiveThreadFactoryBuilder() {
       this.parkingTimeWindowLength = getDefaultParkingTimeWindowLength();
-      this.threadCreationTimeWindowLength = getDefaultThreadCreationTimeWindowLength();
+      this.threadCreationTimeWindowLength =
+        getDefaultThreadCreationTimeWindowLength();
       this.discriminator = getDefaultDiscriminator();
       this.cpuUsageSamplingPeriod = getDefaultCpuUsageSamplingPeriod();
-      this.numberRelevantCpuUsageSamples = getDefaultNumberRelevantCpuUsageSamples();
+      this.numberRelevantCpuUsageSamples =
+        getDefaultNumberRelevantCpuUsageSamples();
       this.stateQueryInterval = Optional.empty();
       this.numberRecurrencesUntilTransition = Optional.empty();
       this.threadCreationHandler = Optional.empty();
@@ -356,7 +413,9 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   private void initialise() {
     this.platformThreadFactory = Thread.ofPlatform().factory();
     this.virtualThreadFactory = Thread.ofVirtual().factory();
-    this.threads = new ConcurrentLinkedQueue<Thread>();
+    this.marks = new ConcurrentHashMap<Thread, Boolean>();
+    this.parkingTimes = new ConcurrentLinkedQueue<Long>();
+    this.threadCreationTimes = new ConcurrentLinkedQueue<Long>();
     createCpuUsageSupplier();
     this.cpuUsageSamples = new ConcurrentLinkedQueue<Double>();
     if (homogeneousExecutionModeInEffect()) {
@@ -379,37 +438,37 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
 
   private static Discriminator getDefaultDiscriminator() {
     Discriminator defaultDiscriminator = (
-        long numberParkingsInTimeWindow,
-        long numberThreadCreationsInTimeWindow,
-        double cpuUsage,
-        long numberFactoryThreads,
-        Optional<AdaptiveThreadFactory.ThreadType> currentThreadType
-      ) -> {
-        if (numberParkingsInTimeWindow < 600) {
-          return AdaptiveThreadFactory.ThreadType.PLATFORM;
-        } else if (numberParkingsInTimeWindow >= 1100) {
-          return AdaptiveThreadFactory.ThreadType.VIRTUAL;
-        } else {
-          if (
-            currentThreadType
-              .get()
-              .equals(AdaptiveThreadFactory.ThreadType.PLATFORM)
-          ) {
-            if (cpuUsage >= 0.5) {
-              return AdaptiveThreadFactory.ThreadType.PLATFORM;
-            } else {
-              return AdaptiveThreadFactory.ThreadType.VIRTUAL;
-            }
+      long numberParkingsInTimeWindow,
+      long numberThreadCreationsInTimeWindow,
+      double cpuUsage,
+      long numberFactoryThreads,
+      Optional<AdaptiveThreadFactory.ThreadType> currentThreadType
+    ) -> {
+      if (numberParkingsInTimeWindow < 600) {
+        return AdaptiveThreadFactory.ThreadType.PLATFORM;
+      } else if (numberParkingsInTimeWindow >= 1100) {
+        return AdaptiveThreadFactory.ThreadType.VIRTUAL;
+      } else {
+        if (
+          currentThreadType
+            .get()
+            .equals(AdaptiveThreadFactory.ThreadType.PLATFORM)
+        ) {
+          if (cpuUsage >= 0.5) {
+            return AdaptiveThreadFactory.ThreadType.PLATFORM;
           } else {
-            if (cpuUsage >= 0.425) {
-              return AdaptiveThreadFactory.ThreadType.PLATFORM;
-            } else {
-              return AdaptiveThreadFactory.ThreadType.VIRTUAL;
-            }
+            return AdaptiveThreadFactory.ThreadType.VIRTUAL;
+          }
+        } else {
+          if (cpuUsage >= 0.425) {
+            return AdaptiveThreadFactory.ThreadType.PLATFORM;
+          } else {
+            return AdaptiveThreadFactory.ThreadType.VIRTUAL;
           }
         }
-      };
-      return defaultDiscriminator;
+      }
+    };
+    return defaultDiscriminator;
   }
 
   private static int getDefaultCpuUsageSamplingPeriod() {
@@ -454,9 +513,10 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     Optional<Integer> numberRecurrencesUntilTransition,
     Optional<Runnable> threadCreationHandler
   ) {
-    this.adaptiveThreadFactoryId = adaptiveThreadFactoryCounter.incrementAndGet();
-    this.parkingTimeWindowLength = parkingTimeWindowLength;
-    this.threadCreationTimeWindowLength = threadCreationTimeWindowLength;
+    this.adaptiveThreadFactoryId =
+      adaptiveThreadFactoryCounter.incrementAndGet();
+    this.parkingTimeWindowLength = parkingTimeWindowLength * 1_000_000;
+    this.threadCreationTimeWindowLength = threadCreationTimeWindowLength * 1_000_000;
     this.discriminator = discriminator;
     this.cpuUsageSamplingPeriod = cpuUsageSamplingPeriod;
     this.numberRelevantCpuUsageSamples = numberRelevantCpuUsageSamples;
@@ -464,12 +524,6 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     this.numberRecurrencesUntilTransition = numberRecurrencesUntilTransition;
     this.threadCreationHandler = threadCreationHandler;
     validateUserSpecification();
-    addMonitor(this.adaptiveThreadFactoryId);
-    setMonitorParameters(
-      this.adaptiveThreadFactoryId,
-      this.parkingTimeWindowLength,
-      this.threadCreationTimeWindowLength
-    );
     initialise();
   }
 
@@ -507,15 +561,8 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
   }
 
   private void performTransition() {
-    LinkedList<Thread> oldThreads = new LinkedList<Thread>();
-    Iterator<Thread> iterator = this.threads.iterator();
-    while (iterator.hasNext()) {
-      Thread oldThread = iterator.next();
-      oldThreads.add(oldThread);
-    }
-    for (final Thread oldThread : oldThreads) {
-      oldThread.setAsInterruptedByAdaptiveThreadFactory();
-    }
+    this.marks.replaceAll((Thread thread, Boolean markedForTermination) -> true
+      );
   }
 
   private void startTransitionManager() {
@@ -554,8 +601,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
           final double cpuUsageSample = this.systemCpuUsageSupplier.get();
           this.cpuUsageSamples.add(cpuUsageSample);
           if (
-            this.cpuUsageSamples.size() >
-            this.numberRelevantCpuUsageSamples
+            this.cpuUsageSamples.size() > this.numberRelevantCpuUsageSamples
           ) {
             this.cpuUsageSamples.poll();
           }
@@ -600,28 +646,19 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
         newThread = virtualThreadFactory.newThread(augmentedTask);
       }
     }
-    newThread.associateWithAdaptiveThreadFactory(this.adaptiveThreadFactoryId);
-    threads.add(newThread);
+    register(newThread);
     return newThread;
   }
 
   private Runnable augmentTask(Runnable originalTask) {
     final Runnable augmentedTask = () -> {
-      registerJavaThreadAndAssociateOSThreadWithMonitor(
-        Thread.currentThread().getAdaptiveThreadFactoryId(),
-        Thread.currentThread().threadId()
-      );
-      recordThreadCreation(Thread.currentThread().getAdaptiveThreadFactoryId());
+      recordThreadCreation();
       originalTask.run();
-      deregisterJavaThreadAndDisassociateOSThreadFromMonitor(
-        Thread.currentThread().getAdaptiveThreadFactoryId(),
-        Thread.currentThread().threadId()
-      );
-      this.threads.remove(Thread.currentThread());
-      if(Thread.currentThread().isInterruptedByAdaptiveThreadFactory()) {
+      deregister(Thread.currentThread());
+      if (AdaptiveThreadFactory.isMarkedForTransition(Thread.currentThread())) {
         this.threadCreationHandler.ifPresent((Runnable runnable) ->
-          runnable.run()
-        );
+            runnable.run()
+          );
       }
     };
     return augmentedTask;
@@ -666,20 +703,20 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     if (homogeneousExecutionModeInEffect()) {
       stopTransitionManager();
     }
-    removeMonitor(this.adaptiveThreadFactoryId);
   }
 
-  /* Methods for testing */
+  private long countRecentAndRemoveOldValues(ConcurrentLinkedQueue<Long> values, long lowerBound) {
+    values.removeIf((Long value) -> value < lowerBound);
+    return values.size();
+  }
 
   /**
    * Comment
    * @return Comment
    */
   public long getNumberParkingsInTimeWindow() {
-    long numberParkingsInTimeWindow = countParkingsInTimeWindow(
-      this.adaptiveThreadFactoryId
-    );
-    return numberParkingsInTimeWindow;
+    long lowerBound = System.nanoTime() - this.parkingTimeWindowLength;
+    return countRecentAndRemoveOldValues(this.parkingTimes, lowerBound);
   }
 
   /**
@@ -687,10 +724,8 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    * @return Comment
    */
   public long getNumberThreadCreationsInTimeWindow() {
-    long numberThreadCreationsInTimeWindow = countThreadCreationsInTimeWindow(
-      this.adaptiveThreadFactoryId
-    );
-    return numberThreadCreationsInTimeWindow;
+    long lowerBound = System.nanoTime() - this.threadCreationTimeWindowLength;
+    return countRecentAndRemoveOldValues(this.threadCreationTimes, lowerBound);
   }
 
   /**
@@ -698,8 +733,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    * @return Comment
    */
   public long getNumberThreads() {
-    long numberThreads = countNumberThreads(this.adaptiveThreadFactoryId);
-    return numberThreads;
+    return this.marks.size();
   }
 
   /**
@@ -723,52 +757,7 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
    *
    * @param   discriminator Comment
    */
-  public void setDiscriminator(
-    Discriminator discriminator
-  ) {
+  public void setDiscriminator(Discriminator discriminator) {
     this.discriminator = discriminator;
   }
-
-  /* Native methods */
-
-  private native void addMonitor(int adaptiveThreadFactoryId);
-
-  private native void removeMonitor(int adaptiveThreadFactoryId);
-
-  private native void setMonitorParameters(
-    int adaptiveThreadFactoryId,
-    long parkingTimeWindowLength,
-    long threadCreationTimeWindowLength
-  );
-
-  private static native void registerJavaThreadAndAssociateOSThreadWithMonitor(
-    int adaptiveThreadFactoryId,
-    long javaLevelThreadId
-  ); // called by platform and virtual threads
-
-  private static native void deregisterJavaThreadAndDisassociateOSThreadFromMonitor(
-    int adaptiveThreadFactoryId,
-    long javaLevelThreadId
-  ); // called by platform and virtual threads
-
-  static native void associateOSThreadWithMonitor(
-    int adaptiveThreadFactoryId,
-    long javaLevelThreadId
-  ); // called by virtual threads only
-
-  static native void disassociateOSThreadFromMonitor(
-    int adaptiveThreadFactoryId,
-    long javaLevelThreadId
-  ); // called by virtual threads only
-
-  private static native void recordThreadCreation(int adaptiveThreadFactoryId);
-
-  /* Native methods for testing */
-  static native long countParkingsInTimeWindow(int adaptiveThreadFactoryId);
-
-  static native long countThreadCreationsInTimeWindow(
-    int adaptiveThreadFactoryId
-  );
-
-  static native long countNumberThreads(int adaptiveThreadFactoryId);
 }
