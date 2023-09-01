@@ -654,12 +654,12 @@ public class AdaptiveThreadFactory implements ThreadFactory, AutoCloseable {
     final Runnable augmentedTask = () -> {
       recordThreadCreation();
       originalTask.run();
-      deregister(Thread.currentThread());
-      if (AdaptiveThreadFactory.isMarkedForTransition(Thread.currentThread())) {
+      if (isMarkedForTransition(Thread.currentThread())) {
         this.threadCreationHandler.ifPresent((Runnable runnable) ->
             runnable.run()
           );
       }
+      deregister(Thread.currentThread());
     };
     return augmentedTask;
   }
